@@ -1,5 +1,8 @@
 #include <iostream>
 #include <string>
+#include <cstdlib> // for getenv
+#include <sstream> // for string stream
+#include <unistd.h> // for access() and X_OK
 
 std::string getHead(std::string command) {
   return command.substr(0,command.find(" "));
@@ -11,16 +14,26 @@ std::string getBody(std::string command) {
 
 void checkType(std::string command) {
   std::string arg = getBody(command);
-  if(arg == "echo") {
-    std::cout << "echo is a shell builtin";
-  } else if (arg == "exit") {
-    std::cout << "exit is a shell builtin";
-  } else if (arg == "type") {
-    std::cout << "type is a shell builtin";
-  } else {
-    std::cout << arg+": not found";
+  if (arg == "echo" || arg == "exit" || arg == "type") {
+    std::cout << arg << " is a shell builtin" << std::endl;
+    return;
   }
-  std::cout << std::endl;
+
+  const char* path_env = std::getenv("PATH");
+  if(path_env != nullptr) {
+    std::stringstream ss(path_env);
+    std::string dir;
+
+    while(std::getline(ss, dir, ':')) {
+      std::string full_path = dir + "/" + arg;
+      if(access(full_path.c_str(), X_OK) == 0) {
+        std::cout << arg << " is " << full_path << std::endl;
+        return;
+      }
+    }
+  }
+
+  std::cout << arg << ": not found" << std::endl;
 }
 
 int main() {
