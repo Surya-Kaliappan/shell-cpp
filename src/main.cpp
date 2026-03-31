@@ -4,36 +4,41 @@
 #include <sstream> // for string stream
 #include <unistd.h> // for access() and X_OK
 
-std::string getHead(std::string command) {
-  return command.substr(0,command.find(" "));
+void parseCommand(const std::string& input, std::string& cmd, std::string& args) {
+  size_t space_pos = input.find(' ');
+
+  if(space_pos != std::string::npos) {
+    cmd = input.substr(0, space_pos);
+    args = input.substr(space_pos+1);
+  } else {
+    cmd = input;
+    args = "";
+  }
 }
 
-std::string getBody(std::string command) {
-  return command.substr(command.find(" ")+1);
-}
-
-void checkType(std::string command) {
-  std::string arg = getBody(command);
-  if (arg == "echo" || arg == "exit" || arg == "type") {
-    std::cout << arg << " is a shell builtin" << std::endl;
-    return;
+void checkType(const std::string& args) {
+  if(args.empty()) return ;
+  
+  if(args == "echo" || args == "exit" || args == "type") {
+    std::cout << args << " is a shell builtin\n";
+    return ;
   }
 
   const char* path_env = std::getenv("PATH");
   if(path_env != nullptr) {
-    std::stringstream ss(path_env);  // getting PATH variable
-    std::string dir;  // Assiging each directory of Path variable
+    std::stringstream ss(path_env);
+    std::string dir;
 
-    while(std::getline(ss, dir, ':')) {   // looping ss separaeting by ':'
-      std::string full_path = dir + "/" + arg;
-      if(access(full_path.c_str(), X_OK) == 0) {  // Checking the file which is executable state or not
-        std::cout << arg << " is " << full_path << std::endl;
-        return;
+    while(std::getline(ss, dir, ':')) {
+      std::string full_path = dir + "/" + args;
+      if(access(full_path.c_str(), X_OK) == 0) {
+        std::cout << args << " is " << full_path << "\n";
+        return ;
       }
     }
   }
 
-  std::cout << arg << ": not found" << std::endl;
+  std::cout << args << ": not found\n";
 }
 
 int main() {
@@ -41,19 +46,28 @@ int main() {
   std::cout << std::unitbuf;
   std::cerr << std::unitbuf;
 
+  std::string input;
+
   while(true){
     std::cout << "$ ";
 
-    std::string command;
-    std::getline(std::cin, command);
-    if(command == "exit"){
+    if(!std::getline(std::cin, input)) {
       break;
-    } else if (getHead(command) == "echo") {
-      std::cout << command.substr(5) << std::endl;
-    } else if (getHead(command) == "type") {
-      checkType(command);
+    }
+    if(input.empty()) continue; // Ignore empty Enter presses
+
+    std::string cmd, args;
+    parseCommand(input, cmd, args);
+    if(cmd == "exit"){
+      break;
+    } else if (cmd == "echo") {
+      std::cout << args << std::endl;
+    } else if (cmd == "type") {
+      checkType(args);
     } else {
-      std::cout << command << ": command not found" << std::endl;
+      std::cout << input << ": command not found" << std::endl;
     }
   }
+
+  return 0;
 }
