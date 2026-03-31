@@ -21,12 +21,12 @@ void checkType(std::string command) {
 
   const char* path_env = std::getenv("PATH");
   if(path_env != nullptr) {
-    std::stringstream ss(path_env);
-    std::string dir;
+    std::stringstream ss(path_env);  // getting PATH variable
+    std::string dir;  // Assiging each directory of Path variable
 
-    while(std::getline(ss, dir, ':')) {
+    while(std::getline(ss, dir, ':')) {   // looping ss separaeting by ':'
       std::string full_path = dir + "/" + arg;
-      if(access(full_path.c_str(), X_OK) == 0) {
+      if(access(full_path.c_str(), X_OK) == 0) {  // Checking the file which is executable state or not
         std::cout << arg << " is " << full_path << std::endl;
         return;
       }
