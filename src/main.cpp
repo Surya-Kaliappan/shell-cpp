@@ -84,7 +84,7 @@ int main() {
   std::string input;
 
   while(true){
-    std::cout << "$ ";
+    std::cout << "$";
 
     if(!std::getline(std::cin, input)) {
       break;
