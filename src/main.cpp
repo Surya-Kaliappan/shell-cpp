@@ -59,8 +59,21 @@ void executePwd() {
   }
 }
 
-void executeCd(const std::string& path) {
+void executeCd(std::string path) {
   if(path.empty()) return;
+
+  if (path[0] == '~') {
+        const char* home_env = std::getenv("HOME");
+        
+        if (home_env != nullptr) {
+            // 2. Replace the '~' with the actual home directory path
+            // path.substr(1) grabs everything AFTER the '~' (like "/Documents")
+            path = std::string(home_env) + path.substr(1);
+        } else {
+            std::cerr << "cd: HOME not set\n";
+            return;
+        }
+    }
 
   if(chdir(path.c_str()) != 0) {
     std::cout << "cd: " << path << ": No Such file or directory\n";
