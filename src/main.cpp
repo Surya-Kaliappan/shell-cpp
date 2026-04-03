@@ -3,7 +3,7 @@
 #include <vector>
 #include <cstdlib> // for getenv
 #include <sstream> // for string stream
-#include <unistd.h> // for access() and X_OK
+#include <unistd.h> // for access() and X_OK and getcwd()
 #include <sys/wait.h> // for waitpid()
 
 // funtion to split the command and arguments
@@ -23,7 +23,7 @@ void parseCommand(const std::string& input, std::string& cmd, std::string& args)
 void checkType(const std::string& args) {
   if(args.empty()) return ;
   
-  if(args == "echo" || args == "exit" || args == "type") {
+  if(args == "echo" || args == "exit" || args == "type" || args == "pwd") {
     std::cout << args << " is a shell builtin\n";
     return ;
   }
@@ -35,7 +35,7 @@ void checkType(const std::string& args) {
 
     while(std::getline(ss, dir, ':')) {
       std::string full_path = dir + "/" + args;
-      if(access(full_path.c_str(), X_OK) == 0) {
+      if(access(full_path.c_str(), X_OK) == 0) {  // X_OX means check the executable file
         std::cout << args << " is " << full_path << "\n";
         return ;
       }
@@ -99,11 +99,19 @@ int main() {
       std::cout << args << std::endl;
     } else if (cmd == "type") {
       checkType(args);
+    } else if (cmd == "pwd") {
+      char cwd[1024]; // buffer to hold the current working directory path
+      if(getcwd(cwd, sizeof(cwd)) != nullptr) {  // char *getcwd(char *buf, size_t size);
+        std::cout << cwd << "\n";
+      } else {
+        std::cerr << "Error: Could not get current directory\n";
+      }
     } else {
-      // std::cout << input << ": command not found" << std::endl;
       executeExternal(cmd, args);
     }
+    std::cout << "\n";
   }
+
 
   return 0;
 }
