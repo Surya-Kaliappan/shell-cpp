@@ -1,3 +1,3 @@
-codecrafter/shell/navigation/pwd
+codecrafter/shell/navigation/cd
 
-creat the builtin function for pwd to print the current working directory.
+created a builtin cd function to navigate through directories. and the structure of buildin list. and created the separate function for cd and pwd.

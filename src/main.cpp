@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <unordered_set>
 #include <cstdlib> // for getenv
 #include <sstream> // for string stream
 #include <unistd.h> // for access() and X_OK and getcwd()
@@ -22,8 +23,12 @@ void parseCommand(const std::string& input, std::string& cmd, std::string& args)
 // function to find the either type or executable file path
 void checkType(const std::string& args) {
   if(args.empty()) return ;
-  
-  if(args == "echo" || args == "exit" || args == "type" || args == "pwd") {
+
+  std::unordered_set<std::string> builtins = {
+    "echo", "exit", "type", "pwd", "cd"
+  };
+
+  if(builtins.find(args) != builtins.end()) {
     std::cout << args << " is a shell builtin\n";
     return ;
   }
@@ -43,6 +48,23 @@ void checkType(const std::string& args) {
   }
 
   std::cout << args << ": not found\n";
+}
+
+void executePwd() {
+  char cwd[1024]; // buffer to hold the current working directory path
+  if(getcwd(cwd, sizeof(cwd)) != nullptr) {  // char *getcwd(char *buf, size_t size);
+    std::cout << cwd << "\n";
+  } else {
+    std::cerr << "Error: Could not get current directory\n";
+  }
+}
+
+void executeCd(const std::string& path) {
+  if(path.empty()) return;
+
+  if(chdir(path.c_str()) != 0) {
+    std::cout << "cd: " << path << ": No Such file or directory\n";
+  }
 }
 
 // function to execute external programs
@@ -68,7 +90,7 @@ void executeExternal(const std::string& cmd, const std::string& args_str) {
     execvp(c_args[0], c_args.data()); // This will execute the command in child process
     std::cout << cmd << ": command not found\n"; // if the process success then this line won't work unless failed
     exit(1);
-  } else if(pid > 0) {
+  } else if(pid > 0) {  // pid_t waitpid(pid_t pid, int *status, int options);
     int status;  // this vaiable will hold the exit status of the child process
     waitpid(pid, &status, 0); // wait for the child process to finish
   } else {
@@ -100,12 +122,9 @@ int main() {
     } else if (cmd == "type") {
       checkType(args);
     } else if (cmd == "pwd") {
-      char cwd[1024]; // buffer to hold the current working directory path
-      if(getcwd(cwd, sizeof(cwd)) != nullptr) {  // char *getcwd(char *buf, size_t size);
-        std::cout << cwd << "\n";
-      } else {
-        std::cerr << "Error: Could not get current directory\n";
-      }
+      executePwd();
+    } else if (cmd == "cd") {
+      executeCd(args);
     } else {
       executeExternal(cmd, args);
     }
