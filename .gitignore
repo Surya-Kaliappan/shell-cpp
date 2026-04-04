@@ -7,6 +7,7 @@ ehthumbs_vista.db
 
 # Dump file
 *.stackdump
+test.cpp
 
 # Folder config file
 [Dd]esktop.ini
@@ -228,7 +229,7 @@ vc_hdrs.h
 # Project-level settings
 /.tgitconfig
 
-##### PuTTY
+#include <cstdlib> // for getenv##### PuTTY
 # Private key
 *.ppk
 

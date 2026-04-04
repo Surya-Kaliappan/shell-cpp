@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 #include <unordered_set>
-#include <cstdlib> // for getenv
 #include <sstream> // for string stream
 #include <unistd.h> // for access() and X_OK and getcwd()
 #include <sys/wait.h> // for waitpid()
