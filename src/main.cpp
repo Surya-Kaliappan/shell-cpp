@@ -10,16 +10,20 @@
 std::vector<std::string> parseInput(const std::string& input) {
   std::vector<std::string> args;
   std::string current;
-  bool in_single_quotes = false;
+  bool in_single = false;
+  bool in_double = false;
   bool in_word = false;  // track if we have started building a word
 
   for(size_t i=0; i<input.length(); i++) {
     char c = input[i];
 
-    if(c == '\'') {
-      in_single_quotes = !in_single_quotes; // Toggle state
+    if(c == '\'' && !in_double) {
+      in_single = !in_single; // Toggle state
       in_word = true; // Even empty quotes like '' count as a word
-    } else if (c == ' ' && !in_single_quotes) {
+    } else if (c == '"' && !in_single) {
+      in_double = !in_double;
+      in_word = true;
+    } else if (c == ' ' && !in_single && !in_double) {
       // Space OUTSIDE of quotes means the word is done
       if(in_word) { 
         args.push_back(current);
