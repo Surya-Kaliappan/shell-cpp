@@ -9,3 +9,7 @@ Complete cd functions with ~ , ../
 ### codecrafter/shell/quoting/single_quotes
 
 Modified the function `parseCommand` to `parseInput` to store the value in the vector and used wisely. This reduced the some work in `executeExternal`.
+
+### codecrafter/shell/quoting/double_quotes
+
+Modified the function `parseInput` which accepts the double quotes and single quotes simultaneously. 
