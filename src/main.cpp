@@ -71,7 +71,7 @@ void checkType(const std::string& args) {
 }
 
 void executeEcho(const std::vector<std::string>& tokens) {
-  for(size_t i=0; i<tokens.size(); i++) {
+  for(size_t i=1; i<tokens.size(); i++) {
     std::cout << tokens[i] << (i == tokens.size()-1 ? "" : " ");
   }
   std::cout << "\n";
