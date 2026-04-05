@@ -17,7 +17,14 @@ std::vector<std::string> parseInput(const std::string& input) {
   for(size_t i=0; i<input.length(); i++) {
     char c = input[i];
 
-    if(c == '\'' && !in_double) {
+    if(c == '\\' && !in_single && !in_double) {  // Backslash in outside quotes
+      if(i+1 < input.length()) {
+        current += input[i+1];
+        in_word = true;
+        i++;
+      }
+    }
+    else if(c == '\'' && !in_double) {
       in_single = !in_single; // Toggle state
       in_word = true; // Even empty quotes like '' count as a word
     } else if (c == '"' && !in_single) {

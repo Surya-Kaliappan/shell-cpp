@@ -12,4 +12,8 @@ Modified the function `parseCommand` to `parseInput` to store the value in the v
 
 ### codecrafter/shell/quoting/double_quotes
 
-Modified the function `parseInput` which accepts the double quotes and single quotes simultaneously. 
+Modified the function `parseInput` which accepts the double quotes and single quotes simultaneously.
+
+### codecrafter/shell/quoting/backslash(outside)
+
+Modified the function `parseInput` to add if condition at top of among all conditions. this escapes the character after the backslash.
