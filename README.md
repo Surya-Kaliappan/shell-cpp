@@ -25,3 +25,7 @@ No changes in code, becuase this backslash acts as other character in the input,
 ### codecrafter/shell/quoting/backslash(inside) double quotes
 
 Lines extra added in the `parseInput` for backslash wintin the double quotes, this accepts the character after the backslash.
+
+### codecrafter/shell/quoting/executable in quotes
+
+No changes in code, because as usual, text in the double quotes would treat as a single token, so there is no functions, then i will search for executables.
