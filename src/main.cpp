@@ -5,6 +5,7 @@
 #include <sstream> // for string stream
 #include <unistd.h> // for access() and X_OK and getcwd()
 #include <sys/wait.h> // for waitpid()
+#include <fcntl.h> // for open(), O_WRONLY, O_CREAT, O_TRUNC
 
 // funtion to split the command and arguments and respect quotes
 std::vector<std::string> parseInput(const std::string& input) {
@@ -152,6 +153,66 @@ void executeExternal(const std::vector<std::string>& tokens) {
   }
 }
 
+bool executeCommand(std::vector<std::string>& tokens) {
+  if(tokens.empty()) return true;
+
+  // Find and Extract Redirection
+  std::string output_file = "";
+  for(size_t i=0; i<tokens.size(); i++) {
+    if(tokens[i] == ">" || tokens[i] == "1>") {
+      if(i+1 < tokens.size()) {
+        output_file = tokens[i+1];  // store the file name
+        tokens.erase(tokens.begin() + i, tokens.begin() + i + 2); // erase the  > and filename from the tokens
+        break;
+      }
+    }
+  }
+
+  if(tokens.empty()) return true;
+  std::string cmd = tokens[0];
+
+  // Handle Exit Early
+  if(cmd == "exit") {
+    return false;
+  }
+
+  // setup redirection
+  int original_stdout = -1;  // backup the original terminal output
+  if(!output_file.empty()) {
+    int fd = open(output_file.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644); // turn mode to write, create if not exist, and truncate data if exists, 0644 for file permission
+    if(fd != -1) {
+      original_stdout = dup(STDOUT_FILENO);  // backup the File Descriptor 4 which give 1 as value.
+      dup2(fd, STDOUT_FILENO);  // this violently unplugs screen(File Descriptor 1) and plugs newly opened text file  
+      close(fd);  // don't need the original file wire anymore because it is securely plugged into the STDOUT slot.
+    } else {
+      std::cerr << "Error opening file\n";
+      return true;
+    }
+  }
+
+  // Routing table
+  if(cmd == "echo") {
+    executeEcho(tokens);
+  } else if(cmd == "type") {
+    if(tokens.size() > 1) checkType(tokens[1]);
+  } else if(cmd == "pwd") {
+    executePwd();
+  } else if(cmd == "cd") {
+    if(tokens.size() > 1) executeCd(tokens[1]);
+  } else {
+    executeExternal(tokens);
+  }
+
+  // restore redirection
+  if(original_stdout != -1) {
+    std::cout.flush();  // flush() forces C++ to push every last letter out into the text file before we switch the wires back.
+    dup2(original_stdout, STDOUT_FILENO);  // take our backup wire (the screen) and plug it back into the STDOUT slot.
+    close(original_stdout);
+  }
+
+  return true;
+}
+
 int main() {
   // Flush after every std::cout / std:cerr
   std::cout << std::unitbuf;
@@ -159,32 +220,18 @@ int main() {
 
   std::string input;
 
-  while(true){
+  while(true) {
     std::cout << "\n$ ";
 
     if(!std::getline(std::cin, input)) break;
-    if(input.empty()) continue; // Ignore empty Enter presses
+    if(input.empty()) continue;
 
     std::vector<std::string> tokens = parseInput(input);
-    if(tokens.empty()) continue;
 
-    std::string cmd = tokens[0];
-
-    if(cmd == "exit"){
+    if(!executeCommand(tokens)) {
       break;
-    } else if (cmd == "echo") {
-      executeEcho(tokens);
-    } else if (cmd == "type") {
-      if(tokens.size() > 1) checkType(tokens[1]);
-    } else if (cmd == "pwd") {
-      executePwd();
-    } else if (cmd == "cd") {
-      if(tokens.size() > 1) executeCd(tokens[1]);
-    } else {
-      executeExternal(tokens);
     }
   }
-
 
   return 0;
 }
