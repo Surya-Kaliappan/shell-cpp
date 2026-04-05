@@ -17,3 +17,7 @@ Modified the function `parseInput` which accepts the double quotes and single qu
 ### codecrafter/shell/quoting/backslash(outside)
 
 Modified the function `parseInput` to add if condition at top of among all conditions. this escapes the character after the backslash.
+
+### codecrafter/shell/quoting/backslash(inside)
+
+No changes in code, becuase this backslash acts as other character in the input, no escaping special.
