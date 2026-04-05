@@ -23,8 +23,21 @@ std::vector<std::string> parseInput(const std::string& input) {
         in_word = true;
         i++;
       }
-    }
-    else if(c == '\'' && !in_double) {
+    } else if(c == '\\' && in_double) {  // Backslash in double quotes inside
+      if(i+1 < input.length()) {
+        char next_c = input[i+1];
+        if(next_c == '"' || next_c == '\\' || next_c == '$' || next_c == '`' || next_c == '\n') {
+          current += next_c;
+          i++;
+        } else {
+          current += c;
+        }
+        in_word = true;
+      } else {
+        current += c;
+        in_word = true;
+      }
+    } else if(c == '\'' && !in_double) {
       in_single = !in_single; // Toggle state
       in_word = true; // Even empty quotes like '' count as a word
     } else if (c == '"' && !in_single) {

@@ -21,3 +21,7 @@ Modified the function `parseInput` to add if condition at top of among all condi
 ### codecrafter/shell/quoting/backslash(inside)
 
 No changes in code, becuase this backslash acts as other character in the input, no escaping special.
+
+### codecrafter/shell/quoting/backslash(inside) double quotes
+
+Lines extra added in the `parseInput` for backslash wintin the double quotes, this accepts the character after the backslash.
