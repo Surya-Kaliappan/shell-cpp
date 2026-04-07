@@ -29,3 +29,7 @@ Lines extra added in the `parseInput` for backslash wintin the double quotes, th
 ### codecrafter/shell/quoting/executable in quotes
 
 No changes in code, because as usual, text in the double quotes would treat as a single token, so there is no functions, then i will search for executables.
+
+### codecrafter/shell/redirection/stdout
+
+This is the biggest change in the code, because before executing the input, it will check the name of file name first, if there then duplicate the current slot and save it in 4. after execting the input which saves the output in file, and back to original by changing the slot. here we used pipeline to change the data direction.
