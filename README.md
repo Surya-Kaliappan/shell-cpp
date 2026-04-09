@@ -33,3 +33,7 @@ No changes in code, because as usual, text in the double quotes would treat as a
 ### codecrafter/shell/redirection/stdout
 
 This is the biggest change in the code, because before executing the input, it will check the name of file name first, if there then duplicate the current slot and save it in 4. after execting the input which saves the output in file, and back to original by changing the slot. here we used pipeline to change the data direction.
+
+### codecrafter/shell/redirection/stderr
+
+This is same as stdout, but this only stores the error when happen, for this we should mention as '2>'. This done by adding condition in `executeCommand`. created the 'target_fd' to target the slot accordingly.

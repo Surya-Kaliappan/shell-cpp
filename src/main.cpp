@@ -158,11 +158,21 @@ bool executeCommand(std::vector<std::string>& tokens) {
 
   // Find and Extract Redirection
   std::string output_file = "";
+  int target_fd = -1; // this hold the pipe to redirect
+
   for(size_t i=0; i<tokens.size(); i++) {
     if(tokens[i] == ">" || tokens[i] == "1>") {
       if(i+1 < tokens.size()) {
         output_file = tokens[i+1];  // store the file name
+        target_fd = STDOUT_FILENO; // Pipe 1
         tokens.erase(tokens.begin() + i, tokens.begin() + i + 2); // erase the  > and filename from the tokens
+        break;
+      }
+    } else if(tokens[i] == "2>") {
+      if(i+1 < tokens.size()) {
+        output_file = tokens[i+1];
+        target_fd = STDERR_FILENO;  // Pipe 2
+        tokens.erase(tokens.begin() + i, tokens.begin() + i + 2);
         break;
       }
     }
@@ -177,12 +187,12 @@ bool executeCommand(std::vector<std::string>& tokens) {
   }
 
   // setup redirection
-  int original_stdout = -1;  // backup the original terminal output
-  if(!output_file.empty()) {
+  int original_fd = -1;  // backup the original terminal output
+  if(!output_file.empty() && target_fd != -1) {
     int fd = open(output_file.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644); // turn mode to write, create if not exist, and truncate data if exists, 0644 for file permission
     if(fd != -1) {
-      original_stdout = dup(STDOUT_FILENO);  // backup the File Descriptor 4 which give 1 as value.
-      dup2(fd, STDOUT_FILENO);  // this violently unplugs screen(File Descriptor 1) and plugs newly opened text file  
+      original_fd = dup(target_fd);  // backup the File Descriptor 4 which give 1 as value.
+      dup2(fd, target_fd);  // this violently unplugs screen(File Descriptor 1) and plugs newly opened text file  
       close(fd);  // don't need the original file wire anymore because it is securely plugged into the STDOUT slot.
     } else {
       std::cerr << "Error opening file\n";
@@ -204,10 +214,10 @@ bool executeCommand(std::vector<std::string>& tokens) {
   }
 
   // restore redirection
-  if(original_stdout != -1) {
+  if(original_fd != -1) {
     std::cout.flush();  // flush() forces C++ to push every last letter out into the text file before we switch the wires back.
-    dup2(original_stdout, STDOUT_FILENO);  // take our backup wire (the screen) and plug it back into the STDOUT slot.
-    close(original_stdout);
+    dup2(original_fd, target_fd);  // take our backup wire (slot) and plug it back into the stored slot.
+    close(original_fd);
   }
 
   return true;
