@@ -143,7 +143,7 @@ void executeExternal(const std::vector<std::string>& tokens) {
   pid_t pid = fork();
   if(pid == 0) {
     execvp(c_args[0], c_args.data()); // This will execute the command in child process
-    std::cout << tokens[0] << ": command not found\n"; // if the process success then this line won't work unless failed
+    std::cerr << tokens[0] << ": command not found\n"; // if the process success then this line won't work unless failed
     exit(1);
   } else if(pid > 0) {  // pid_t waitpid(pid_t pid, int *status, int options);
     int status;  // this vaiable will hold the exit status of the child process
@@ -215,7 +215,9 @@ bool executeCommand(std::vector<std::string>& tokens) {
 
   // restore redirection
   if(original_fd != -1) {
-    std::cout.flush();  // flush() forces C++ to push every last letter out into the text file before we switch the wires back.
+    // flush() forces C++ to push every last letter out into the text file before we switch the wires back.
+    if(target_fd == STDOUT_FILENO) std::cout.flush();
+    if(target_fd == STDERR_FILENO) std::cerr.flush();
     dup2(original_fd, target_fd);  // take our backup wire (slot) and plug it back into the stored slot.
     close(original_fd);
   }
