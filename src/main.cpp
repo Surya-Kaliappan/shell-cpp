@@ -159,12 +159,21 @@ bool executeCommand(std::vector<std::string>& tokens) {
   // Find and Extract Redirection
   std::string output_file = "";
   int target_fd = -1; // this hold the pipe to redirect
+  bool append_mode = false; // Track if we are appending or overwriting
 
   for(size_t i=0; i<tokens.size(); i++) {
-    if(tokens[i] == ">" || tokens[i] == "1>") {
+    if(tokens[i] == ">>" || tokens[i] == "1>>") {
+      if(i+1 < tokens.size()) {
+        output_file = tokens[i+1];
+        target_fd = STDOUT_FILENO;
+        append_mode = true;
+        tokens.erase(tokens.begin() + i, tokens.begin() + i + 2);
+      }
+    } else if(tokens[i] == ">" || tokens[i] == "1>") {
       if(i+1 < tokens.size()) {
         output_file = tokens[i+1];  // store the file name
         target_fd = STDOUT_FILENO; // Pipe 1
+        append_mode = false;
         tokens.erase(tokens.begin() + i, tokens.begin() + i + 2); // erase the  > and filename from the tokens
         break;
       }
@@ -172,6 +181,7 @@ bool executeCommand(std::vector<std::string>& tokens) {
       if(i+1 < tokens.size()) {
         output_file = tokens[i+1];
         target_fd = STDERR_FILENO;  // Pipe 2
+        append_mode = false;
         tokens.erase(tokens.begin() + i, tokens.begin() + i + 2);
         break;
       }
@@ -189,7 +199,16 @@ bool executeCommand(std::vector<std::string>& tokens) {
   // setup redirection
   int original_fd = -1;  // backup the original terminal output
   if(!output_file.empty() && target_fd != -1) {
-    int fd = open(output_file.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644); // turn mode to write, create if not exist, and truncate data if exists, 0644 for file permission
+
+    // flag decision to open the file
+    int flags = O_WRONLY | O_CREAT;  // turn mode to write, create if not exist
+    if(append_mode) {
+      flags |= O_APPEND;  // append flag
+    } else {
+      flags |= O_TRUNC;  // truncate (overwrite) flag
+    }
+    
+    int fd = open(output_file.c_str(), flags, 0644); //  0644 for file permission
     if(fd != -1) {
       original_fd = dup(target_fd);  // backup the File Descriptor 4 which give 1 as value.
       dup2(fd, target_fd);  // this violently unplugs screen(File Descriptor 1) and plugs newly opened text file  

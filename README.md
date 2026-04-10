@@ -37,3 +37,7 @@ This is the biggest change in the code, because before executing the input, it w
 ### codecrafter/shell/redirection/stderr
 
 This is same as stdout, but this only stores the error when happen, for this we should mention as '2>'. This done by adding condition in `executeCommand`. created the 'target_fd' to target the slot accordingly.
+
+### codecrafter/shell/redirection/append_stdout
+
+Modified the `executeCommand` by tracking the appending mode to change the file flag. remaining things were work like `stdout` function.
