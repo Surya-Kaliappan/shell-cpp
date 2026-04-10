@@ -168,6 +168,7 @@ bool executeCommand(std::vector<std::string>& tokens) {
         target_fd = STDOUT_FILENO;
         append_mode = true;
         tokens.erase(tokens.begin() + i, tokens.begin() + i + 2);
+        break;
       }
     } else if(tokens[i] == ">" || tokens[i] == "1>") {
       if(i+1 < tokens.size()) {
@@ -175,6 +176,14 @@ bool executeCommand(std::vector<std::string>& tokens) {
         target_fd = STDOUT_FILENO; // Pipe 1
         append_mode = false;
         tokens.erase(tokens.begin() + i, tokens.begin() + i + 2); // erase the  > and filename from the tokens
+        break;
+      }
+    } else if(tokens[i] == "2>>") {
+      if(i+1 < tokens.size()) {
+        output_file = tokens[i+1];
+        target_fd = STDERR_FILENO;
+        append_mode = true;
+        tokens.erase(tokens.begin() + i, tokens.begin() + i + 2);
         break;
       }
     } else if(tokens[i] == "2>") {

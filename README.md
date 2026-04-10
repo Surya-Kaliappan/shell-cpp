@@ -41,3 +41,7 @@ This is same as stdout, but this only stores the error when happen, for this we 
 ### codecrafter/shell/redirection/append_stdout
 
 Modified the `executeCommand` by tracking the appending mode to change the file flag. remaining things were work like `stdout` function.
+
+### codecrafter/shell/redirection/append_stderr
+
+Added a if condition which are already controlling the slot and flags in `executeCommand`.
