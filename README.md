@@ -45,3 +45,7 @@ Modified the `executeCommand` by tracking the appending mode to change the file 
 ### codecrafter/shell/redirection/append_stderr
 
 Added a if condition which are already controlling the slot and flags in `executeCommand`.
+
+### codecrafter/shell/command_completion/builtin_completion
+
+Here the default `std::getline` has been removed, instead to get the input by function called `readLine` which is custom function that changes the behavious of terminal to raw mode from cooked mode. this raw mode won't have any functions to do. everything shold be control by code. once done with tab fuction, we back to the cooked mode to work as usual(after input).

@@ -6,6 +6,7 @@
 #include <unistd.h> // for access() and X_OK and getcwd()
 #include <sys/wait.h> // for waitpid()
 #include <fcntl.h> // for open(), O_WRONLY, O_CREAT, O_TRUNC
+#include <termios.h> // for raw mode terminal control
 
 // funtion to split the command and arguments and respect quotes
 std::vector<std::string> parseInput(const std::string& input) {
@@ -253,6 +254,64 @@ bool executeCommand(std::vector<std::string>& tokens) {
   return true;
 }
 
+bool readLine(std::string& input) {
+  termios oldt, newt;  // termios is a struct that holds the settings for terminal(colors, speed, modes)
+  tcgetattr(STDIN_FILENO, &oldt);  // tcgetattr gets the current attributes of terminal
+  newt = oldt;
+  newt.c_lflag &= ~(ICANON | ECHO);  // disable buffering and auto-printing
+  tcsetattr(STDIN_FILENO, TCSANOW, &newt); // TCSANOW means tells the OS to apply these changes "NOW"
+
+  input.clear();
+  char c;
+
+  while(true) {
+    int n = read(STDIN_FILENO, &c, 1);
+    if(n <= 0 || c == 4) {  // If EOF or Ctrl-D is pressed
+      tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+      return false;  // main loop to break
+    }
+
+    if(c == '\n') {
+      write(STDOUT_FILENO, "\n", 1); // print the enter key
+      break;
+    } else if(c == 127) { // Backspace Key
+      if(!input.empty()) {
+        input.pop_back();
+        // Move cursor back, print a space to erase, move cursor back again
+        write(STDOUT_FILENO, "\b \b", 3);
+      }
+    } else if(c == '\t') {  // TAB key (Autocomplete)
+      std::vector<std::string> builtins = {"echo", "exit"};
+      std::vector<std::string> matches;
+
+      for(size_t i=0; i<builtins.size(); i++) {
+        if(builtins[i].rfind(input, 0) == 0) {
+          matches.push_back(builtins[i]);
+        }
+      }
+
+      // if found exactly one match, autocomplete it!
+      if(matches.size() == 1) {
+        // Grab the missing letters
+        std::string completion = matches[0].substr(input.length()) + " ";
+        input += completion;
+        // Print the missing letters to the screen
+        write(STDOUT_FILENO, completion.c_str(), completion.length());
+      } else {
+        write(STDOUT_FILENO, "\a", 1);
+      }
+    } else {
+      // Normal characters
+      input += c;
+      write(STDOUT_FILENO, &c, 1); // Manually print the letter just types
+    }
+  }
+
+  // Restore normal Cooked Mode before running the command
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+  return true;
+}
+
 int main() {
   // Flush after every std::cout / std:cerr
   std::cout << std::unitbuf;
@@ -262,8 +321,9 @@ int main() {
 
   while(true) {
     std::cout << "\n$ ";
+    std::cout.flush(); // flush the prompt before turning on Raw Mode
 
-    if(!std::getline(std::cin, input)) break;
+    if(!readLine(input)) break;  // exit if Ctrl-D is pressed
     if(input.empty()) continue;
 
     std::vector<std::string> tokens = parseInput(input);
