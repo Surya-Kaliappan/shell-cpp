@@ -7,6 +7,8 @@
 #include <sys/wait.h> // for waitpid()
 #include <fcntl.h> // for open(), O_WRONLY, O_CREAT, O_TRUNC
 #include <termios.h> // for raw mode terminal control
+#include <dirent.h> // for opening and reading directories
+#include <set> // to store unique autocomplete matches
 
 // funtion to split the command and arguments and respect quotes
 std::vector<std::string> parseInput(const std::string& input) {
@@ -254,6 +256,49 @@ bool executeCommand(std::vector<std::string>& tokens) {
   return true;
 }
 
+std::vector<std::string> getCompletions(const std::string& prefix) {
+  if(prefix.empty()) return {};
+
+  std::set<std::string> matches;
+
+  std::vector<std::string> builtins = {"echo", "exit", "type", "pwd", "cd"};
+  for(size_t i=0; i<builtins.size(); i++) {
+    if(builtins[i].rfind(prefix, 0) == 0) {
+      matches.insert(builtins[i]);
+    }
+  }
+
+  const char* path_env = std::getenv("PATH");
+  if(path_env != nullptr) {
+    std::stringstream ss(path_env);
+    std::string dir;
+
+    while(std::getline(ss, dir, ':')) {  // separate the path string by : and used to loop
+      DIR* dp = opendir(dir.c_str());  // POSIX system call to open the folder. it returns "Directory Pointer"(dp).
+      if(dp != nullptr) {
+        struct dirent* entry;  // Directory Entry: This is struct that holds the information for a single file inside the folder.
+
+        while((entry = readdir(dp)) != nullptr) { // Every call, the OS move the cursor to next file in the folder, it also make the loop working until nullptr.
+          std::string name = entry->d_name;  // grabs the actual name of the file.
+
+          // Every single folder in UNIX contains a hidden link to itself and parent, So skip these.
+          if(name == "." || name == "..") continue; // '.' -> current, '..' -> parent
+
+          if(name.rfind(prefix, 0) == 0) {
+            std::string full_path = dir + "/" + name;
+            if(access(full_path.c_str(), X_OK) == 0) {
+              matches.insert(name);
+            }
+          }
+        }
+        closedir(dp); // must to close the opened directory to avoid memory leak
+      }
+    }
+  }
+
+  return std::vector<std::string>(matches.begin(), matches.end());
+}
+
 bool readLine(std::string& input) {
   termios oldt, newt;  // termios is a struct that holds the settings for terminal(colors, speed, modes)
   tcgetattr(STDIN_FILENO, &oldt);  // tcgetattr gets the current attributes of terminal
@@ -281,14 +326,7 @@ bool readLine(std::string& input) {
         write(STDOUT_FILENO, "\b \b", 3);
       }
     } else if(c == '\t') {  // TAB key (Autocomplete)
-      std::vector<std::string> builtins = {"echo", "exit"};
-      std::vector<std::string> matches;
-
-      for(size_t i=0; i<builtins.size(); i++) {
-        if(builtins[i].rfind(input, 0) == 0) {
-          matches.push_back(builtins[i]);
-        }
-      }
+      std::vector<std::string> matches = getCompletions(input);
 
       // if found exactly one match, autocomplete it!
       if(matches.size() == 1) {

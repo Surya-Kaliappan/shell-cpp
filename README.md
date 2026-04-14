@@ -61,3 +61,7 @@ No changes done, because already mention that in `readLine`, once the enter hits
 ### codecrafter/shell/command_completion/missing_completion
 
 No changes done. as usual, if there is no matcing foudn then won't auto complete the input. so already implemented in the function `readLine`
+
+### codecrafter/shell/command_completion/executable_completion
+
+A function named `getCompletion` which handles to collect the matching words and return in vector. this has some few line which is replaced from `readLine` which controll the builtin list. so now it `getCompletion` will handle both executable and builtin list to autocomplete. This gets the data from 'PATH' and check the executables.  
