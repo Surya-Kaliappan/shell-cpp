@@ -56,4 +56,4 @@ Here the default `std::getline` has been removed, instead to get the input by fu
 
 ### codecrafter/shell/command_completion/completion_with_argument
 
-No changes done, because already mention that in `readLin`, once the enter hits, it gives \n which breaks the loop of getting input and start execute the input.
+No changes done, because already mention that in `readLine`, once the enter hits, it gives \n which breaks the loop of getting input and start execute the input.
