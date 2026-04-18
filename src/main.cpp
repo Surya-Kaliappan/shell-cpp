@@ -308,6 +308,7 @@ bool readLine(std::string& input) {
 
   input.clear();
   char c;
+  int tab_count = 0;  // handle tab count
 
   while(true) {
     int n = read(STDIN_FILENO, &c, 1);
@@ -326,6 +327,7 @@ bool readLine(std::string& input) {
         write(STDOUT_FILENO, "\b \b", 3);
       }
     } else if(c == '\t') {  // TAB key (Autocomplete)
+      tab_count++;
       std::vector<std::string> matches = getCompletions(input);
 
       // if found exactly one match, autocomplete it!
@@ -335,10 +337,30 @@ bool readLine(std::string& input) {
         input += completion;
         // Print the missing letters to the screen
         write(STDOUT_FILENO, completion.c_str(), completion.length());
+      } else if(matches.size() > 1) {
+        if(tab_count == 1) {
+          write(STDOUT_FILENO, "\a", 1);
+        } else if(tab_count >= 2) {
+          write(STDOUT_FILENO, "\n", 1);
+
+          for(size_t i=0; i<matches.size(); i++) {
+            write(STDOUT_FILENO, matches[i].c_str(), matches[i].length());
+            if(i != matches.size() - 1) {
+              write(STDOUT_FILENO, "  ", 2);
+            }
+          }
+          write(STDOUT_FILENO, "\n", 1);
+          write(STDOUT_FILENO, "$ ", 2);
+          write(STDOUT_FILENO, input.c_str(), input.length());
+
+          tab_count = 0;
+        }
       } else {
         write(STDOUT_FILENO, "\a", 1);
+        tab_count = 0;
       }
     } else {
+      tab_count = 0;
       // Normal characters
       input += c;
       write(STDOUT_FILENO, &c, 1); // Manually print the letter just types
