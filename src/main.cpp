@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <unordered_set>
 #include <sstream> // for string stream
 #include <unistd.h> // for access() and X_OK and getcwd()
@@ -9,6 +10,9 @@
 #include <termios.h> // for raw mode terminal control
 #include <dirent.h> // for opening and reading directories
 #include <set> // to store unique autocomplete matches
+
+// Global Constants
+const std::vector<std::string> BUILTINS = {"echo", "exit", "type", "pwd", "cd"};
 
 // funtion to split the command and arguments and respect quotes
 std::vector<std::string> parseInput(const std::string& input) {
@@ -71,13 +75,11 @@ std::vector<std::string> parseInput(const std::string& input) {
 void checkType(const std::string& args) {
   if(args.empty()) return ;
 
-  std::unordered_set<std::string> builtins = {
-    "echo", "exit", "type", "pwd", "cd"
-  };
-
-  if(builtins.find(args) != builtins.end()) {
-    std::cout << args << " is a shell builtin\n";
-    return ;
+  for(size_t i=0; i<BUILTINS.size(); i++) {
+    if(args == BUILTINS[i]) {
+      std::cout << args << " is a shell builtin\n";
+      return;
+    }
   }
 
   const char* path_env = std::getenv("PATH");
@@ -164,39 +166,30 @@ bool executeCommand(std::vector<std::string>& tokens) {
   int target_fd = -1; // this hold the pipe to redirect
   bool append_mode = false; // Track if we are appending or overwriting
 
-  for(size_t i=0; i<tokens.size(); i++) {
-    if(tokens[i] == ">>" || tokens[i] == "1>>") {
-      if(i+1 < tokens.size()) {
-        output_file = tokens[i+1];
-        target_fd = STDOUT_FILENO;
-        append_mode = true;
-        tokens.erase(tokens.begin() + i, tokens.begin() + i + 2);
-        break;
-      }
-    } else if(tokens[i] == ">" || tokens[i] == "1>") {
-      if(i+1 < tokens.size()) {
-        output_file = tokens[i+1];  // store the file name
-        target_fd = STDOUT_FILENO; // Pipe 1
-        append_mode = false;
-        tokens.erase(tokens.begin() + i, tokens.begin() + i + 2); // erase the  > and filename from the tokens
-        break;
-      }
-    } else if(tokens[i] == "2>>") {
-      if(i+1 < tokens.size()) {
-        output_file = tokens[i+1];
-        target_fd = STDERR_FILENO;
-        append_mode = true;
-        tokens.erase(tokens.begin() + i, tokens.begin() + i + 2);
-        break;
-      }
-    } else if(tokens[i] == "2>") {
-      if(i+1 < tokens.size()) {
-        output_file = tokens[i+1];
-        target_fd = STDERR_FILENO;  // Pipe 2
-        append_mode = false;
-        tokens.erase(tokens.begin() + i, tokens.begin() + i + 2);
-        break;
-      }
+  for(size_t i = 0; i < tokens.size(); i++) {
+    bool is_redirect = true;
+
+    if (tokens[i] == ">" || tokens[i] == "1>") {
+      target_fd = STDOUT_FILENO;
+      append_mode = false;
+    } else if (tokens[i] == ">>" || tokens[i] == "1>>") {
+      target_fd = STDOUT_FILENO;
+      append_mode = true;
+    } else if (tokens[i] == "2>") {
+      target_fd = STDERR_FILENO;
+      append_mode = false;
+    } else if (tokens[i] == "2>>") {
+      target_fd = STDERR_FILENO;
+      append_mode = true;
+    } else {
+      is_redirect = false; 
+    }
+
+    // If we found a redirect operator, extract the file and erase the tokens ONCE
+    if (is_redirect && i + 1 < tokens.size()) {
+      output_file = tokens[i + 1];
+      tokens.erase(tokens.begin() + i, tokens.begin() + i + 2);
+      break; 
     }
   }
 
@@ -261,10 +254,9 @@ std::vector<std::string> getCompletions(const std::string& prefix) {
 
   std::set<std::string> matches;
 
-  std::vector<std::string> builtins = {"echo", "exit", "type", "pwd", "cd"};
-  for(size_t i=0; i<builtins.size(); i++) {
-    if(builtins[i].rfind(prefix, 0) == 0) {
-      matches.insert(builtins[i]);
+  for(size_t i=0; i< BUILTINS.size(); i++) {
+    if(BUILTINS[i].rfind(prefix, 0) == 0) {
+      matches.insert(BUILTINS[i]);
     }
   }
 
