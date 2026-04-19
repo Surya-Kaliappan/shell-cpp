@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <unordered_set>
 #include <sstream> // for string stream
 #include <unistd.h> // for access() and X_OK and getcwd()
 #include <sys/wait.h> // for waitpid()
@@ -291,6 +290,23 @@ std::vector<std::string> getCompletions(const std::string& prefix) {
   return std::vector<std::string>(matches.begin(), matches.end());
 }
 
+std::string getLongestCommonPrefix(const std::vector<std::string>& matches) {
+  if(matches.empty()) return "";
+
+  std::string prefix = matches[0];  // assuming first element as prefix
+
+  for(size_t i=1; i<matches.size(); i++) {
+    size_t j=0;
+    while(j < prefix.length() && j < matches[i].length() && prefix[j] == matches[i][j]) {
+      j++;
+    }
+    prefix = prefix.substr(0,j); // starts from ith index to add j characters.
+    if(prefix.empty()) break; // emergency stop if no prefix at all
+  }
+
+  return prefix;
+}
+
 bool readLine(std::string& input) {
   termios oldt, newt;  // termios is a struct that holds the settings for terminal(colors, speed, modes)
   tcgetattr(STDIN_FILENO, &oldt);  // tcgetattr gets the current attributes of terminal
@@ -329,23 +345,33 @@ bool readLine(std::string& input) {
         input += completion;
         // Print the missing letters to the screen
         write(STDOUT_FILENO, completion.c_str(), completion.length());
+        tab_count = 0;
       } else if(matches.size() > 1) {
-        if(tab_count == 1) {
-          write(STDOUT_FILENO, "\a", 1);
-        } else if(tab_count >= 2) {
-          write(STDOUT_FILENO, "\n", 1);
+        std::string lcp = getLongestCommonPrefix(matches);
 
-          for(size_t i=0; i<matches.size(); i++) {
-            write(STDOUT_FILENO, matches[i].c_str(), matches[i].length());
-            if(i != matches.size() - 1) {
-              write(STDOUT_FILENO, "  ", 2);
+        if(lcp.length() > input.length()) {
+          std::string added_chars = lcp.substr(input.length());  // starts from ith index to end.
+          input = lcp;
+          write(STDOUT_FILENO, added_chars.c_str(), added_chars.length());
+
+        } else {
+          if(tab_count == 1) {
+            write(STDOUT_FILENO, "\a", 1);
+          } else if(tab_count >= 2) {
+            write(STDOUT_FILENO, "\n", 1);
+
+            for(size_t i=0; i<matches.size(); i++) {
+              write(STDOUT_FILENO, matches[i].c_str(), matches[i].length());
+
+              if(i != matches.size() - 1) {
+                write(STDOUT_FILENO, "  ", 2);
+              }
             }
-          }
-          write(STDOUT_FILENO, "\n", 1);
-          write(STDOUT_FILENO, "$ ", 2);
-          write(STDOUT_FILENO, input.c_str(), input.length());
+            write(STDOUT_FILENO, "\n$ ", 3);
+            write(STDOUT_FILENO, input.c_str(), input.length());
 
-          tab_count = 0;
+            tab_count = 0;
+          }
         }
       } else {
         write(STDOUT_FILENO, "\a", 1);

@@ -69,3 +69,7 @@ A function named `getCompletion` which handles to collect the matching words and
 ### codecrafter/shell/command_completion/multiple_completions
 
 Modified the function `readLine` to count the tab pressed and add the condition to show the list of matches and again print the incomplete search text in the prompt input.
+
+### codecrafter/shell/command_completion/partial_completion
+
+Created a function named `getLongestCommonPrefix` which gives the longest common prefix return as string. after getting in `readLine` adds if condition to check the length of prefix and input should be greated. if greater then update the input, and STDOUT_FILENO for user visible. if not as usual it have old rest code of readline as else part.
