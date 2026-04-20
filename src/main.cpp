@@ -3,7 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <sstream> // for string stream
-#include <unistd.h> // for access() and X_OK and getcwd()
+#include <unistd.h> // for access() and X_OK and getcwd() and pipe()
 #include <sys/wait.h> // for waitpid()
 #include <fcntl.h> // for open(), O_WRONLY, O_CREAT, O_TRUNC
 #include <termios.h> // for raw mode terminal control
@@ -157,6 +157,57 @@ void executeExternal(const std::vector<std::string>& tokens) {
   }
 }
 
+// function to execute the pipeline commands
+bool executePipeline(const std::vector<std::string>& tokens, size_t pipe_index) {
+	std::vector<std::string> left_tokens(tokens.begin(), tokens.begin() + pipe_index); // store the left side commands
+	std::vector<std::string> right_tokens(tokens.begin() + pipe_index + 1, tokens.end()); // store the right side commands
+	
+	int pipefd[2]; // integer array to hold File Descriptor
+	if(pipe(pipefd) == -1){
+		std::cerr << "pipe failed\n";
+		return true;
+	}
+	
+	pid_t pid1 = fork();
+	if(pid1 == 0) {
+		dup2(pipefd[1], STDOUT_FILENO);
+		close(pipefd[0]);
+		close(pipefd[1]);
+
+    std::vector<char*> c_args;
+    for(size_t i=0; i<left_tokens.size(); i++) {
+      c_args.push_back(const_cast<char*>(left_tokens[i].c_str()));
+    }
+    c_args.push_back(nullptr);
+    execvp(c_args[0], c_args.data());
+    std::cerr << left_tokens[0] << ": command not found\n";
+    exit(1);
+	}
+  pid_t pid2 = fork();
+  if(pid2 == 0) {
+    dup2(pipefd[0], STDIN_FILENO);
+    close(pipefd[0]);
+    close(pipefd[1]);
+
+    std::vector<char*> c_args;
+    for(size_t i=0; i<right_tokens.size(); i++) {
+      c_args.push_back(const_cast<char*>(right_tokens[i].c_str()));
+    }
+    c_args.push_back(nullptr);
+    execvp(c_args[0], c_args.data());
+    std::cerr << right_tokens[0] << ": command not found\n";
+    exit(1);
+  }
+
+  close(pipefd[0]);
+  close(pipefd[1]);
+
+  waitpid(pid1, nullptr, 0);
+  waitpid(pid2, nullptr, 0);
+
+  return true;
+}
+
 bool executeCommand(std::vector<std::string>& tokens) {
   if(tokens.empty()) return true;
 
@@ -168,7 +219,9 @@ bool executeCommand(std::vector<std::string>& tokens) {
   for(size_t i = 0; i < tokens.size(); i++) {
     bool is_redirect = true;
 
-    if (tokens[i] == ">" || tokens[i] == "1>") {
+	if(tokens[i] == "|") {
+	  return executePipeline(tokens, i);
+	} else if (tokens[i] == ">" || tokens[i] == "1>") {
       target_fd = STDOUT_FILENO;
       append_mode = false;
     } else if (tokens[i] == ">>" || tokens[i] == "1>>") {
