@@ -144,8 +144,8 @@ void executeExternal(const std::vector<std::string>& tokens) {
   }
   c_args.push_back(nullptr);
 
-  pid_t pid = fork();
-  if(pid == 0) {
+  pid_t pid = fork();  // This creates clone of this whole execution and run separately
+  if(pid == 0) {  // fork return two pid for parent and chile, and both of them have this same if conditions.
     execvp(c_args[0], c_args.data()); // This will execute the command in child process
     std::cerr << tokens[0] << ": command not found\n"; // if the process success then this line won't work unless failed
     exit(1);
