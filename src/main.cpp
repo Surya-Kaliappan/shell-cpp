@@ -184,44 +184,74 @@ void runWorker(const std::vector<std::string>& tokens) {
 }
 
 // function to execute the pipeline commands
-bool executePipeline(const std::vector<std::string>& tokens, size_t pipe_index) {
-	std::vector<std::string> left_tokens(tokens.begin(), tokens.begin() + pipe_index); // store the left side commands
-	std::vector<std::string> right_tokens(tokens.begin() + pipe_index + 1, tokens.end()); // store the right side commands
-	
-	int pipefd[2]; // integer array to hold File Descriptor
-	if(pipe(pipefd) == -1){ // pipe() is function creates unidirectional data channel to let parent and child process communicate.
-		std::cerr << "pipe failed\n"; // pipefd[0] -> read end of the pipe
-		return true; // pipefd[1] -> write end of the pipe
-	}
-	
-  // The Writer
-	pid_t pid1 = fork();  // create worker to handle the output of command to connect to read tube
-	if(pid1 == 0) {  // checking child process or not
-		dup2(pipefd[1], STDOUT_FILENO);  // connect the tube from file descriptor to write end
-		close(pipefd[0]);
-		close(pipefd[1]);
+bool executePipeline(const std::vector<std::string>& tokens) {
+	std::vector<std::vector<std::string>> commands; // commands store in dynamic array method
+  std::vector<std::string> current_cmd; // used for temporary command store
 
-    runWorker(left_tokens);
-	}
+  for(size_t i=0; i<tokens.size(); i++) {
+    if(tokens[i] == "|") {
+      if(!current_cmd.empty()) {
+        commands.push_back(current_cmd);
+        current_cmd.clear();
+      }
+    } else {
+      current_cmd.push_back(tokens[i]);
+    }
+  }
+  if(!current_cmd.empty()) commands.push_back(current_cmd); // for getting the last command after the loop
 
-  // The Reader
-  pid_t pid2 = fork();  // clone make everything copy even pipefd, if we close here, it won't affect outside of its.
-  if(pid2 == 0) {
-    dup2(pipefd[0], STDIN_FILENO); // connect the tube from file descriptor to read end
-    close(pipefd[0]);
-    close(pipefd[1]);
+  int num_cmds = commands.size(); // number of commands
+  std::vector<pid_t> pids; // creating vector to store pids
 
-    runWorker(right_tokens);
+  int prev_read_fd = -1; // stores the reading pipe of previous one
+
+  for(int i=0; i<num_cmds; i++) {
+    int pipefd[2];
+
+    // creating pipe for every command except last one because of only print normal screen
+    if(i < num_cmds-1) {
+      if(pipe(pipefd) == -1) {  // pipefd[0](out) for reading and pipefd[1](in) for writing
+        std::cerr << "pipe failed\n";
+        return true;
+      }
+    }
+
+    // creating clone which returns two pids, one for child(pid 0) and another parent
+    pid_t pid = fork();
+    if(pid == 0) {
+
+      // every command should get the data from previous pipe except first one
+      if(i > 0) {
+        dup2(prev_read_fd, STDIN_FILENO); // change the input direction from previous read pipe
+        close(prev_read_fd);
+      }
+
+      // every command should put the data to next pipe except last one
+      if(i < num_cmds-1) {
+        dup2(pipefd[1], STDOUT_FILENO); // change the output direction for next pipe
+        close(pipefd[0]);
+        close(pipefd[1]);
+      }
+
+      runWorker(commands[i]);  // pass the command which handles builtins and rest things
+    }
+
+    pids.push_back(pid); // keep tracking the clones by storing
+    if(prev_read_fd != -1) {
+      close(prev_read_fd); // closing the previous reading pipe
+    }
+
+    if(i < num_cmds-1) {
+      prev_read_fd = pipefd[0];  // assigning the read pipe to next clone
+      close(pipefd[1]); // close the write pipe
+    }
   }
 
-  // closing the outside tubes
-  close(pipefd[0]); 
-  close(pipefd[1]);
-
-  // This is directly reaches here, so need any conditions to declare
-  int status1, status2;  // good pratice to keep the status of child
-  waitpid(pid1, &status1, 0);
-  waitpid(pid2, &status2, 0);
+  // sleep until the clone in list to finish and die
+  for(size_t i=0; i<pids.size(); i++) {
+    int status;
+    waitpid(pids[i], &status, 0);
+  }
 
   return true;
 }
@@ -229,6 +259,13 @@ bool executePipeline(const std::vector<std::string>& tokens, size_t pipe_index) 
 bool executeCommand(std::vector<std::string>& tokens) {
   if(tokens.empty()) return true;
 
+  // separately check the pipe occurance in the command
+  for(size_t i=0; i<tokens.size(); i++) {
+    if(tokens[i] == "|") {
+      return executePipeline(tokens);
+    }
+  }
+ 
   // Find and Extract Redirection
   std::string output_file = "";
   int target_fd = -1; // this hold the pipe to redirect
@@ -237,9 +274,7 @@ bool executeCommand(std::vector<std::string>& tokens) {
   for(size_t i = 0; i < tokens.size(); i++) {
     bool is_redirect = true;
 
-    if(tokens[i] == "|") {
-      return executePipeline(tokens, i);
-    } else if (tokens[i] == ">" || tokens[i] == "1>") {
+    if (tokens[i] == ">" || tokens[i] == "1>") {
       target_fd = STDOUT_FILENO;
       append_mode = false;
     } else if (tokens[i] == ">>" || tokens[i] == "1>>") {

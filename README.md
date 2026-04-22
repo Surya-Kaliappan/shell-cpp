@@ -83,3 +83,7 @@ This is most confusing topic, here created a function called `executePipeline` w
 ### codecrafter/shell/pipeline/pipeline_with_builtins
 
 This handles the to not every command should go through with execvp() so here created a function name `runWoker` which separates the flow for builtins to call its repective function, rest will be else part which is nothing but the part of both pid1 and pid2 in `executePipeline`. So nothing big deal.
+
+### codecrafter/shell/pipeline/multi-command_pipelines
+
+This dynamic approach would handle multiple command by like linked list connecting reading pipe to previous and writing pipe to next pipe. This changes the hard coded lines in function `executePipeline`. and in function `executeCommand` always checks the pipeline first, rest things after this.
