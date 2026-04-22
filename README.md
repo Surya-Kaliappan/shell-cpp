@@ -73,3 +73,7 @@ Modified the function `readLine` to count the tab pressed and add the condition 
 ### codecrafter/shell/command_completion/partial_completion
 
 Created a function named `getLongestCommonPrefix` which gives the longest common prefix return as string. after getting in `readLine` adds if condition to check the length of prefix and input should be greated. if greater then update the input, and STDOUT_FILENO for user visible. if not as usual it have old rest code of readline as else part.
+
+### codecrafter/shell/pipelines/dual-command_pipeline
+
+This is most confusing topic, here created a function called `executePipeline` which works like  `executeExternal` additional `executeCommand`. because combination of pid control and dup control in single function. here we separate the command into two, right and left, starts with left like feed to memory(write) and move to rigth like take from memory(read). In this function feels like most concepts understood from two functions were lies. for easy understand just dig a tunnel for both child one transfer the data which suppose to show in the output and another recieve data which suppose to input by user, this tunnel handles limited data(approx 64kb), so this all doing simutaneously.

@@ -136,8 +136,8 @@ void executeCd(std::string path) {
 }
 
 // function to execute external programs
-void executeExternal(const std::vector<std::string>& tokens) {
-  std::vector<char*> c_args;
+void executeExternal(const std::vector<std::string>& tokens, int input_fd = STDIN_FILENO, int output_fd = STDOUT_FILENO) {
+  std::vector<char*> c_args;  // char* is used to store string like in C.
 
   for(size_t i=0; i<tokens.size(); i++) {
     c_args.push_back(const_cast<char*>(tokens[i].c_str()));
@@ -163,14 +163,15 @@ bool executePipeline(const std::vector<std::string>& tokens, size_t pipe_index) 
 	std::vector<std::string> right_tokens(tokens.begin() + pipe_index + 1, tokens.end()); // store the right side commands
 	
 	int pipefd[2]; // integer array to hold File Descriptor
-	if(pipe(pipefd) == -1){
-		std::cerr << "pipe failed\n";
-		return true;
+	if(pipe(pipefd) == -1){ // pipe() is function creates unidirectional data channel to let parent and child process communicate.
+		std::cerr << "pipe failed\n"; // pipefd[0] -> read end of the pipe
+		return true; // pipefd[1] -> write end of the pipe
 	}
 	
-	pid_t pid1 = fork();
-	if(pid1 == 0) {
-		dup2(pipefd[1], STDOUT_FILENO);
+  // The Writer
+	pid_t pid1 = fork();  // create worker to handle the output of command to connect to read tube
+	if(pid1 == 0) {  // checking child process or not
+		dup2(pipefd[1], STDOUT_FILENO);  // connect the tube from file descriptor to write end
 		close(pipefd[0]);
 		close(pipefd[1]);
 
@@ -183,9 +184,11 @@ bool executePipeline(const std::vector<std::string>& tokens, size_t pipe_index) 
     std::cerr << left_tokens[0] << ": command not found\n";
     exit(1);
 	}
-  pid_t pid2 = fork();
+
+  // The Reader
+  pid_t pid2 = fork();  // clone make everything copy even pipefd, if we close here, it won't affect outside of its.
   if(pid2 == 0) {
-    dup2(pipefd[0], STDIN_FILENO);
+    dup2(pipefd[0], STDIN_FILENO); // connect the tube from file descriptor to read end
     close(pipefd[0]);
     close(pipefd[1]);
 
@@ -199,11 +202,14 @@ bool executePipeline(const std::vector<std::string>& tokens, size_t pipe_index) 
     exit(1);
   }
 
-  close(pipefd[0]);
+  // closing the outside tubes
+  close(pipefd[0]); 
   close(pipefd[1]);
 
-  waitpid(pid1, nullptr, 0);
-  waitpid(pid2, nullptr, 0);
+  // This is directly reaches here, so need any conditions to declare
+  int status1, status2;  // good pratice to keep the status of child
+  waitpid(pid1, &status1, 0);
+  waitpid(pid2, &status2, 0);
 
   return true;
 }
@@ -219,9 +225,9 @@ bool executeCommand(std::vector<std::string>& tokens) {
   for(size_t i = 0; i < tokens.size(); i++) {
     bool is_redirect = true;
 
-	if(tokens[i] == "|") {
-	  return executePipeline(tokens, i);
-	} else if (tokens[i] == ">" || tokens[i] == "1>") {
+    if(tokens[i] == "|") {
+      return executePipeline(tokens, i);
+    } else if (tokens[i] == ">" || tokens[i] == "1>") {
       target_fd = STDOUT_FILENO;
       append_mode = false;
     } else if (tokens[i] == ">>" || tokens[i] == "1>>") {
