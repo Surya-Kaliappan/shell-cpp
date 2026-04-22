@@ -157,6 +157,32 @@ void executeExternal(const std::vector<std::string>& tokens, int input_fd = STDI
   }
 }
 
+// helper function for execvp from child
+void runWorker(const std::vector<std::string>& tokens) {
+  if(tokens.empty()) exit(0);
+  std::string cmd = tokens[0];
+
+  if(cmd == "echo") executeEcho(tokens);
+  else if(cmd == "type") {
+    if(tokens.size() > 1) checkType(tokens[1]);
+  } else if(cmd == "pwd") executePwd();
+  else if(cmd == "cd") {
+    if(tokens.size() > 1) executeCd(tokens[1]);
+  } else if(cmd == "exit") ;
+  else {
+    std::vector<char*> c_args;
+    for(size_t i=0; i<tokens.size(); i++) {
+      c_args.push_back(const_cast<char*>(tokens[i].c_str()));
+    }
+    c_args.push_back(nullptr);
+
+    execvp(c_args[0], c_args.data());
+    std::cerr << tokens[0] << ": command not found\n";
+    exit(1);
+  }
+  exit(0);
+}
+
 // function to execute the pipeline commands
 bool executePipeline(const std::vector<std::string>& tokens, size_t pipe_index) {
 	std::vector<std::string> left_tokens(tokens.begin(), tokens.begin() + pipe_index); // store the left side commands
@@ -175,14 +201,7 @@ bool executePipeline(const std::vector<std::string>& tokens, size_t pipe_index) 
 		close(pipefd[0]);
 		close(pipefd[1]);
 
-    std::vector<char*> c_args;
-    for(size_t i=0; i<left_tokens.size(); i++) {
-      c_args.push_back(const_cast<char*>(left_tokens[i].c_str()));
-    }
-    c_args.push_back(nullptr);
-    execvp(c_args[0], c_args.data());
-    std::cerr << left_tokens[0] << ": command not found\n";
-    exit(1);
+    runWorker(left_tokens);
 	}
 
   // The Reader
@@ -192,14 +211,7 @@ bool executePipeline(const std::vector<std::string>& tokens, size_t pipe_index) 
     close(pipefd[0]);
     close(pipefd[1]);
 
-    std::vector<char*> c_args;
-    for(size_t i=0; i<right_tokens.size(); i++) {
-      c_args.push_back(const_cast<char*>(right_tokens[i].c_str()));
-    }
-    c_args.push_back(nullptr);
-    execvp(c_args[0], c_args.data());
-    std::cerr << right_tokens[0] << ": command not found\n";
-    exit(1);
+    runWorker(right_tokens);
   }
 
   // closing the outside tubes
