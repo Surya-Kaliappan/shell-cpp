@@ -109,3 +109,7 @@ This changes happen in `readLine` to add extra condition which check the up arro
 ### codecrafter/shell/history/down-arrow_navigation
 
 This is same as up arrow, just change the logic of index flow to flow next commands in history list. this also updated in `readLine` function.
+
+### codecrafter/shell/history/executing_commands_from_history
+
+This is already implemented, because the code architecture not only change the text of the command but also change the input value with manually, so when hit the enter it will execute the inner input and give result.
