@@ -140,6 +140,8 @@ void executeCd(std::string path) {
 }
 
 void executeHistory(const std::vector<std::string>& tokens) {
+
+  // Read the history file
   if(tokens.size() >= 3 && tokens[1] == "-r") {
     std::string file_path = tokens[2];
     std::ifstream infile(file_path); // Input File Stream: This gets the file from hard drive if permission to read
@@ -152,6 +154,23 @@ void executeHistory(const std::vector<std::string>& tokens) {
       infile.close(); // close the connection
     } else {
       std::cerr << "history: " << file_path << ": cannot open file\n";
+    }
+    return;
+  }
+
+  // Write the history file
+  if(tokens.size() >= 3 && tokens[1] == "-w") {
+    std::string file_path = tokens[2];
+
+    std::ofstream outfile(file_path); // Output File Stream: this creates file in hard drive and write if permission 
+
+    if(outfile.is_open()) {
+      for(size_t i=0; i<command_history.size(); i++) {
+        outfile << command_history[i] << "\n";  // outfile would handle the recieved data to write in file
+      }
+      outfile.close(); // close the connection
+    } else {
+      std::cerr << "history: " << file_path << ": cannot create file\n";
     }
     return;
   }

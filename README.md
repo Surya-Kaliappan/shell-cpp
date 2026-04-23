@@ -114,6 +114,12 @@ This is same as up arrow, just change the logic of index flow to flow next comma
 
 This is already implemented, because the code architecture not only change the text of the command but also change the input value with manually, so when hit the enter it will execute the inner input and give result.
 
-### codecrafter/shell/history/read_history_file
+---
+
+### codecrafter/shell/history_presistence/read_history_file
 
 The function `executeHistory` has changed find the argument to read the commands from file to history list. This uses the ifstream to manage the file to open and read.
+
+### codecrafter/shell/history_presistence/write_history_file
+
+This function `executeHistory` add ons the condition to get the argument '-w' to write the file with the help of ofstream to manage the file to write and create if not exists. it only write not append
