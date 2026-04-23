@@ -10,6 +10,7 @@
 #include <dirent.h> // for opening and reading directories
 #include <set> // to store unique autocomplete matches
 #include <iomanip> // for std::setw()
+#include <fstream> // for std::ifstream
 
 // Global Constants
 const std::vector<std::string> BUILTINS = {"echo", "exit", "type", "pwd", "cd", "history"};
@@ -139,6 +140,22 @@ void executeCd(std::string path) {
 }
 
 void executeHistory(const std::vector<std::string>& tokens) {
+  if(tokens.size() >= 3 && tokens[1] == "-r") {
+    std::string file_path = tokens[2];
+    std::ifstream infile(file_path); // Input File Stream: This gets the file from hard drive if permission to read
+
+    if(infile.is_open()) { // it prevents program to crash if data pull without connect to file
+      std::string line;
+      while(std::getline(infile, line)) { // This pulls the characters from file
+        command_history.push_back(line);
+      }
+      infile.close(); // close the connection
+    } else {
+      std::cerr << "history: " << file_path << ": cannot open file\n";
+    }
+    return;
+  }
+
   size_t start_index = 0;
 
   // checking if there is <n> argument

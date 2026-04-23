@@ -113,3 +113,7 @@ This is same as up arrow, just change the logic of index flow to flow next comma
 ### codecrafter/shell/history/executing_commands_from_history
 
 This is already implemented, because the code architecture not only change the text of the command but also change the input value with manually, so when hit the enter it will execute the inner input and give result.
+
+### codecrafter/shell/history/read_history_file
+
+The function `executeHistory` has changed find the argument to read the commands from file to history list. This uses the ifstream to manage the file to open and read.
