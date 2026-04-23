@@ -105,3 +105,7 @@ This changes the input of command, because here should handle arguments. to get 
 ### codecrafter/shell/history/up-arrow_navigation
 
 This changes happen in `readLine` to add extra condition which check the up arrow. if clicked then i take the last of history list, depends on the count click it will move on with index.
+
+### codecrafter/shell/history/down-arrow_navigation
+
+This is same as up arrow, just change the logic of index flow to flow next commands in history list. this also updated in `readLine` function.
