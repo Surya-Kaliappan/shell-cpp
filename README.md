@@ -93,3 +93,7 @@ This dynamic approach would handle multiple command by like linked list connecti
 ### codecrafter/shell/history/history_builtin
 
 This is most easiest thing, because here just added the vector to store every command input and function to print the history name `executeHistory`. and updated in the BUILTINS list.
+
+### codecrafter/shell/history/listing_history
+
+This was already done in previous stage.
