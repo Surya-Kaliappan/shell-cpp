@@ -9,9 +9,11 @@
 #include <termios.h> // for raw mode terminal control
 #include <dirent.h> // for opening and reading directories
 #include <set> // to store unique autocomplete matches
+#include <iomanip> // for std::setw()
 
 // Global Constants
-const std::vector<std::string> BUILTINS = {"echo", "exit", "type", "pwd", "cd"};
+const std::vector<std::string> BUILTINS = {"echo", "exit", "type", "pwd", "cd", "history"};
+std::vector<std::string> command_history;
 
 // funtion to split the command and arguments and respect quotes
 std::vector<std::string> parseInput(const std::string& input) {
@@ -70,6 +72,7 @@ std::vector<std::string> parseInput(const std::string& input) {
   return args;
 }
 
+// BUILTINS functions
 // function to find the either type or executable file path
 void checkType(const std::string& args) {
   if(args.empty()) return ;
@@ -135,6 +138,13 @@ void executeCd(std::string path) {
   }
 }
 
+void executeHistory() {
+  for(size_t i=0; i<command_history.size(); i++) {
+    std::cout << std::setw(5) << (i+1) << " " << command_history[i] << "\n";
+  }
+}
+
+// EXTERNAL functions
 // function to execute external programs
 void executeExternal(const std::vector<std::string>& tokens, int input_fd = STDIN_FILENO, int output_fd = STDOUT_FILENO) {
   std::vector<char*> c_args;  // char* is used to store string like in C.
@@ -163,6 +173,7 @@ void runWorker(const std::vector<std::string>& tokens) {
   std::string cmd = tokens[0];
 
   if(cmd == "echo") executeEcho(tokens);
+  else if(cmd == "history") executeHistory();
   else if(cmd == "type") {
     if(tokens.size() > 1) checkType(tokens[1]);
   } else if(cmd == "pwd") executePwd();
@@ -332,6 +343,8 @@ bool executeCommand(std::vector<std::string>& tokens) {
   // Routing table
   if(cmd == "echo") {
     executeEcho(tokens);
+  } else if(cmd == "history") {
+    executeHistory();
   } else if(cmd == "type") {
     if(tokens.size() > 1) checkType(tokens[1]);
   } else if(cmd == "pwd") {
@@ -509,6 +522,8 @@ int main() {
 
     if(!readLine(input)) break;  // exit if Ctrl-D is pressed
     if(input.empty()) continue;
+
+    command_history.push_back(input);
 
     std::vector<std::string> tokens = parseInput(input);
 

@@ -87,3 +87,9 @@ This handles the to not every command should go through with execvp() so here cr
 ### codecrafter/shell/pipeline/multi-command_pipelines
 
 This dynamic approach would handle multiple command by like linked list connecting reading pipe to previous and writing pipe to next pipe. This changes the hard coded lines in function `executePipeline`. and in function `executeCommand` always checks the pipeline first, rest things after this.
+
+---
+
+### codecrafter/shell/history/history_builtin
+
+This is most easiest thing, because here just added the vector to store every command input and function to print the history name `executeHistory`. and updated in the BUILTINS list.
