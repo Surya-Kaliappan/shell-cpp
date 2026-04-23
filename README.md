@@ -101,3 +101,7 @@ This was already done in previous stage.
 ### codecrafter/shell/history/limiting_history_entries
 
 This changes the input of command, because here should handle arguments. to get this by stoi() function to convert from string to integer. after this we just change the logic of loop.
+
+### codecrafter/shell/history/up-arrow_navigation
+
+This changes happen in `readLine` to add extra condition which check the up arrow. if clicked then i take the last of history list, depends on the count click it will move on with index.

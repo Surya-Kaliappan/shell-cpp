@@ -453,6 +453,9 @@ bool readLine(std::string& input) {
   char c;
   int tab_count = 0;  // handle tab count
 
+  // starts at very end of the history list
+  int history_index = command_history.size();
+
   while(true) {
     int n = read(STDIN_FILENO, &c, 1);
     if(n <= 0 || c == 4) {  // If EOF or Ctrl-D is pressed
@@ -460,7 +463,39 @@ bool readLine(std::string& input) {
       return false;  // main loop to break
     }
 
-    if(c == '\n') {
+    // arrow keys
+    if(c == '\033') { // up or down arrow gives linux OS as ^[[A (esc + [ + A or B)
+      char seq[2]; // once got escape character then store other two character in sequence
+      if(read(STDIN_FILENO, &seq[0], 1) <= 0) continue; // if fails to get the character then skip the loop.
+      if(read(STDIN_FILENO, &seq[1], 1) <= 0) continue;
+
+      if(seq[0] == '[') {
+        if(seq[1] == 'A') { // up arrow ^[[A
+          if(history_index > 0) { // check upto last command
+            history_index--;
+            input = command_history[history_index];
+
+            std::string redraw = "\033[2K\r$ " + input; // \033 -> escape character, [ -> CSI, 2 -> horizontal full line, K -> erasae signal, \r -> to reach cursor to starting point
+            write(STDOUT_FILENO, redraw.c_str(), redraw.length());  // write the terminal
+          }
+        } else if(seq[1] == 'B') { // down arrow ^[[B
+          if(history_index < (int)command_history.size()) { // history_index is integer, and size() would return size_t, it won't allow negative, when compare that might problem
+            history_index++;
+
+            if(history_index == (int)command_history.size()) { // reach the end of the history list to show the empty string
+              input = "";
+            } else {
+              input = command_history[history_index];
+            }
+
+            std::string redraw = "\033[2K\r$ " + input;
+            write(STDOUT_FILENO, redraw.c_str(), redraw.length());
+          }
+        }
+      }
+      tab_count = 0;
+      continue;
+    } else if(c == '\n') {
       write(STDOUT_FILENO, "\n", 1); // print the enter key
       break;
     } else if(c == 127) { // Backspace Key
