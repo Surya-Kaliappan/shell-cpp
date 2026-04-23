@@ -138,8 +138,24 @@ void executeCd(std::string path) {
   }
 }
 
-void executeHistory() {
-  for(size_t i=0; i<command_history.size(); i++) {
+void executeHistory(const std::vector<std::string>& tokens) {
+  size_t start_index = 0;
+
+  // checking if there is <n> argument
+  if(tokens.size() > 1) {
+    try {
+      size_t n = std::stoi(tokens[1]); // convert the string to an integer
+      if(n<=0) return;
+
+      if(static_cast<size_t>(n) < command_history.size()) {
+        start_index = command_history.size() - n;
+      }
+    } catch (...) {
+      // std::stoi might fail due to giving no numeric values
+      start_index = 0;
+    }
+  }
+  for(size_t i=start_index; i<command_history.size(); i++) {
     std::cout << std::setw(5) << (i+1) << " " << command_history[i] << "\n";
   }
 }
@@ -173,7 +189,7 @@ void runWorker(const std::vector<std::string>& tokens) {
   std::string cmd = tokens[0];
 
   if(cmd == "echo") executeEcho(tokens);
-  else if(cmd == "history") executeHistory();
+  else if(cmd == "history") executeHistory(tokens);
   else if(cmd == "type") {
     if(tokens.size() > 1) checkType(tokens[1]);
   } else if(cmd == "pwd") executePwd();
@@ -344,7 +360,7 @@ bool executeCommand(std::vector<std::string>& tokens) {
   if(cmd == "echo") {
     executeEcho(tokens);
   } else if(cmd == "history") {
-    executeHistory();
+    executeHistory(tokens);
   } else if(cmd == "type") {
     if(tokens.size() > 1) checkType(tokens[1]);
   } else if(cmd == "pwd") {

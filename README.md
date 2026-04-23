@@ -97,3 +97,7 @@ This is most easiest thing, because here just added the vector to store every co
 ### codecrafter/shell/history/listing_history
 
 This was already done in previous stage.
+
+### codecrafter/shell/history/limiting_history_entries
+
+This changes the input of command, because here should handle arguments. to get this by stoi() function to convert from string to integer. after this we just change the logic of loop.
