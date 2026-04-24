@@ -11,6 +11,7 @@
 #include <set> // to store unique autocomplete matches
 #include <iomanip> // for std::setw()
 #include <fstream> // for std::ifstream
+#include <sys/stat.h> // for chmod()
 
 // Global Constants
 const std::vector<std::string> BUILTINS = {"echo", "exit", "type", "pwd", "cd", "history"};
@@ -142,55 +143,48 @@ void executeCd(std::string path) {
 
 void executeHistory(const std::vector<std::string>& tokens) {
 
-  // Read the history file
-  if(tokens.size() >= 3 && tokens[1] == "-r") {
-    std::string file_path = tokens[2];
-    std::ifstream infile(file_path); // Input File Stream: This gets the file from hard drive if permission to read
-
-    if(infile.is_open()) { // it prevents program to crash if data pull without connect to file
-      std::string line;
-      while(std::getline(infile, line)) { // This pulls the characters from file
-        command_history.push_back(line);
-      }
-      infile.close(); // close the connection
-    } else {
-      std::cerr << "history: " << file_path << ": cannot open file\n";
-    }
-    return;
-  }
-
-  // Write the history file
-  if(tokens.size() >= 3 && tokens[1] == "-w") {
+  if(tokens.size() >= 3) {
+    std::string flag = tokens[1];
     std::string file_path = tokens[2];
 
-    std::ofstream outfile(file_path); // Output File Stream: this creates file in hard drive and write if permission 
-
-    if(outfile.is_open()) {
-      for(size_t i=0; i<command_history.size(); i++) {
-        outfile << command_history[i] << "\n";  // outfile would handle the recieved data to write in file
+    if(flag == "-r") { // read from file
+      std::ifstream infile(file_path); // Input File Stream: This gets the file from hard drive if permission to read
+    
+      if(infile.is_open()) { // it prevents program to crash if data pull without connect to file
+        std::string line;
+        while(std::getline(infile, line)) { // This pulls the characters from file
+          command_history.push_back(line);
+        }
+        infile.close(); // close the connection
+      } else {
+        std::cerr << "history: " << file_path << ": cannot open file\n";
       }
-      outfile.close(); // close the connection
-      history_sync_index = command_history.size(); // update the sync value
-    } else {
-      std::cerr << "history: " << file_path << ": cannot create file\n";
-    }
-    return;
-  }
-
-  // Append the history file
-  if(tokens.size() >= 3 && tokens[1] == "-a") {
-    std::string file_path = tokens[2];
-
-    std::ofstream outfile(file_path, std::ios::app); // ios::app would tell the stream to change append mode
-
-    if(outfile.is_open()) {
-      for(size_t i=history_sync_index; i<command_history.size(); i++) {
-        outfile << command_history[i] << "\n";
+    } else if (flag == "-w") { // write to file
+      std::ofstream outfile(file_path); // Output File Stream: this creates file in hard drive and write if permission 
+    
+      if(outfile.is_open()) {
+        chmod(file_path.c_str(), 0600); // to make the file only read 'n write by owner
+        for(size_t i=0; i<command_history.size(); i++) {
+          outfile << command_history[i] << "\n";  // outfile would handle the recieved data to write in file
+        }
+        outfile.close(); // close the connection
+        history_sync_index = command_history.size(); // update the sync value
+      } else {
+        std::cerr << "history: " << file_path << ": cannot create file\n";
       }
-      outfile.close();
-      history_sync_index = command_history.size(); // update the sync value
-    } else {
-      std::cerr << "history: " << file_path << ": cannot open file\n";
+    } else if(flag == "-a") { // append to file
+      std::ofstream outfile(file_path, std::ios::app); // ios::app would tell the stream to change append mode
+    
+      if(outfile.is_open()) {
+        chmod(file_path.c_str(), 0600);
+        for(size_t i=history_sync_index; i<command_history.size(); i++) {
+          outfile << command_history[i] << "\n";
+        }
+        outfile.close();
+        history_sync_index = command_history.size(); // update the sync value
+      } else {
+        std::cerr << "history: " << file_path << ": cannot open file\n";
+      }
     }
     return;
   }
@@ -218,7 +212,7 @@ void executeHistory(const std::vector<std::string>& tokens) {
 
 // EXTERNAL functions
 // function to execute external programs
-void executeExternal(const std::vector<std::string>& tokens, int input_fd = STDIN_FILENO, int output_fd = STDOUT_FILENO) {
+void executeExternal(const std::vector<std::string>& tokens) {
   std::vector<char*> c_args;  // char* is used to store string like in C.
 
   for(size_t i=0; i<tokens.size(); i++) {
@@ -239,31 +233,34 @@ void executeExternal(const std::vector<std::string>& tokens, int input_fd = STDI
   }
 }
 
-// helper function for execvp from child
-void runWorker(const std::vector<std::string>& tokens) {
-  if(tokens.empty()) exit(0);
+// Built-in Router
+bool runBuiltin(const std::vector<std::string>& tokens) {
+  if(tokens.empty()) return false;
   std::string cmd = tokens[0];
 
-  if(cmd == "echo") executeEcho(tokens);
-  else if(cmd == "history") executeHistory(tokens);
-  else if(cmd == "type") {
-    if(tokens.size() > 1) checkType(tokens[1]);
-  } else if(cmd == "pwd") executePwd();
-  else if(cmd == "cd") {
-    if(tokens.size() > 1) executeCd(tokens[1]);
-  } else if(cmd == "exit") ;
-  else {
-    std::vector<char*> c_args;
-    for(size_t i=0; i<tokens.size(); i++) {
-      c_args.push_back(const_cast<char*>(tokens[i].c_str()));
-    }
-    c_args.push_back(nullptr);
+  if(cmd == "echo") { executeEcho(tokens); return true; }
+  else if(cmd == "history") { executeHistory(tokens); return true; }
+  else if(cmd == "type") { if(tokens.size() > 1) checkType(tokens[1]); return true; }
+  else if(cmd == "pwd") { executePwd(); return true; }
+  else if(cmd == "cd") { if(tokens.size() > 1) executeCd(tokens[1]); return true; }
+  else if(cmd == "exit") { return true; }
 
-    execvp(c_args[0], c_args.data());
-    std::cerr << tokens[0] << ": command not found\n";
-    exit(1);
+  return false;
+}
+
+// helper function for execvp from child
+void runWorker(const std::vector<std::string>& tokens) {
+  if(runBuiltin(tokens)) exit(0); // To run the Builtin commands
+
+  std::vector<char*> c_args;
+  for(size_t i=0; i<tokens.size(); i++) {
+    c_args.push_back(const_cast<char*>(tokens[i].c_str()));
   }
-  exit(0);
+  c_args.push_back(nullptr);
+
+  execvp(c_args[0], c_args.data());
+  std::cerr << tokens[0] << ": command not found\n";
+  exit(1);
 }
 
 // function to execute the pipeline commands
@@ -413,17 +410,7 @@ bool executeCommand(std::vector<std::string>& tokens) {
   }
 
   // Routing table
-  if(cmd == "echo") {
-    executeEcho(tokens);
-  } else if(cmd == "history") {
-    executeHistory(tokens);
-  } else if(cmd == "type") {
-    if(tokens.size() > 1) checkType(tokens[1]);
-  } else if(cmd == "pwd") {
-    executePwd();
-  } else if(cmd == "cd") {
-    if(tokens.size() > 1) executeCd(tokens[1]);
-  } else {
+  if(!runBuiltin(tokens)){
     executeExternal(tokens);
   }
 
@@ -621,11 +608,34 @@ int main() {
   std::cout << std::unitbuf;
   std::cerr << std::unitbuf;
 
+  // load history 
+  std::string histfile_path = "";
+  const char* home_env = std::getenv("HOME"); // get the root file path
+
+  if(home_env != nullptr) {
+    histfile_path = std::string(home_env) + "/.myshell_history";  // add the history file path
+    setenv("HISTFILE", histfile_path.c_str(), 1); // set the HISTFILE value in env
+  } else {
+    std::cerr << "Warning: HOME not set. History will not be saved\n";
+  }
+
+  if(!histfile_path.empty()) {
+    std::ifstream infile(histfile_path);  // read the history file
+    if(infile.is_open()) { // if exsists open
+      std::string line;
+      while (std::getline(infile, line)) {
+        command_history.push_back(line);
+      }
+      infile.close();
+
+      history_sync_index = command_history.size();
+    }
+  }
+
   std::string input;
 
   while(true) {
     std::cout << "\n$ ";
-    std::cout.flush(); // flush the prompt before turning on Raw Mode
 
     if(!readLine(input)) break;  // exit if Ctrl-D is pressed
     if(input.empty()) continue;
@@ -636,6 +646,18 @@ int main() {
 
     if(!executeCommand(tokens)) {
       break;
+    }
+  }
+
+  if(!histfile_path.empty()) {
+    std::ofstream outfile(histfile_path, std::ios::app); // apply append mode
+
+    if(outfile.is_open()) {
+      chmod(histfile_path.c_str(), 0600); // set the read n' write mode only for owner for security
+      for(size_t i=history_sync_index; i<command_history.size(); i++) { // append remaining commands to file
+        outfile << command_history[i] << "\n";
+      }
+      outfile.close(); // close the opened file
     }
   }
 

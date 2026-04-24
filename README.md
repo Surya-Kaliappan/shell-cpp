@@ -127,3 +127,15 @@ This function `executeHistory` add ons the condition to get the argument '-w' to
 ### codecrafter/shell/history_presistence/append_history_file
 
 This function `executeHistroy` add ons the condition to get the agrument '-a' to append the commands to file with help of ofstream with extra iso::app argument, to enable append mode. it will append the commands since the last append happened.
+
+### codecrafter/shell/history_presistence/read_history_on_startup
+
+This topic makes the huge difference to isolate the shell, because bash and zsh has their own history file to fetch history. so decide to create the own history file named '.myshell_history' to store only this shell's command history, this works like when start the shell it will write "export HISTFILE = /.myshell_history". here using chmod to secure the file for only owner. when the shell exit it will automatically saves the history to file.
+
+### codecrafter/shell/history_presistence/write_history_on_exit
+
+This was already done in previous stage.
+
+### codecrafter/shell/history_presistence/append_history_on_exit
+
+This was already done in previous stage
