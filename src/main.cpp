@@ -485,10 +485,19 @@ std::string getLongestCommonPrefix(const std::vector<std::string>& matches) {
   return prefix;
 }
 
-std::vector<std::string> getFileCompletions(const std::string& prefix) {
+std::vector<std::string> getFileCompletions(const std::string& search_term) {
   std::set<std::string> matches;
 
-  DIR* dp = opendir(".");  // get the current working directory
+  std::string dir_path = "."; // Default current Directory
+  std::string prefix = search_term; // Default to whole search term
+
+  size_t last_slash = search_term.find_last_of('/');
+  if(last_slash != std::string::npos) {
+    dir_path = search_term.substr(0, last_slash + 1);
+    prefix = search_term.substr(last_slash + 1);
+  }
+
+  DIR* dp = opendir(dir_path.c_str());  // get the working directory
   if(dp != nullptr) {
     struct dirent* entry; // structure for directory details which holds every files details
 
@@ -497,7 +506,11 @@ std::vector<std::string> getFileCompletions(const std::string& prefix) {
       if(name == "." || name == "..") continue; // evade the current and previous directory sysmbol which default occur
 
       if(name.rfind(prefix, 0) == 0) {
-        matches.insert(name);
+        if(last_slash != std::string::npos) {
+          matches.insert(dir_path + name);
+        } else {
+          matches.insert(name);
+        }
       }
     }
     closedir(dp);

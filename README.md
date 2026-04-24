@@ -145,3 +145,7 @@ This was already done in previous stage
 ### codecrafter/shell/filename_completion/file_completion
 
 This completion achieved by function named `getFileCompletion` which do the same as `getCompletion` but it has the list of current directory files. remaining working were changed little bit as adding remaining characters in the input has changed. now can able to get the single file name search at number of times.
+
+### codecrafter/shell/filename_completion/nested_file_completion
+
+This was totaly awesome, because already code were written for this condition, but hardcoded, so here just handle the inputs and assign the agrument which gives the required suggestion. main things are find last slash to get the path, by applying in `opendir()` which opens the directory to get details of its. everything has updated in `getFileCompletion`.
