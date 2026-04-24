@@ -239,11 +239,11 @@ bool runBuiltin(const std::vector<std::string>& tokens) {
   std::string cmd = tokens[0];
 
   if(cmd == "echo") { executeEcho(tokens); return true; }
-  else if(cmd == "history") { executeHistory(tokens); return true; }
-  else if(cmd == "type") { if(tokens.size() > 1) checkType(tokens[1]); return true; }
-  else if(cmd == "pwd") { executePwd(); return true; }
-  else if(cmd == "cd") { if(tokens.size() > 1) executeCd(tokens[1]); return true; }
-  else if(cmd == "exit") { return true; }
+  if(cmd == "history") { executeHistory(tokens); return true; }
+  if(cmd == "type") { if(tokens.size() > 1) checkType(tokens[1]); return true; }
+  if(cmd == "pwd") { executePwd(); return true; }
+  if(cmd == "cd") { if(tokens.size() > 1) executeCd(tokens[1]); return true; }
+  if(cmd == "exit") { return true; }
 
   return false;
 }
@@ -485,6 +485,27 @@ std::string getLongestCommonPrefix(const std::vector<std::string>& matches) {
   return prefix;
 }
 
+std::vector<std::string> getFileCompletions(const std::string& prefix) {
+  std::set<std::string> matches;
+
+  DIR* dp = opendir(".");  // get the current working directory
+  if(dp != nullptr) {
+    struct dirent* entry; // structure for directory details which holds every files details
+
+    while((entry = readdir(dp)) != nullptr) { // loop the files list
+      std::string name = entry->d_name; // get the file name
+      if(name == "." || name == "..") continue; // evade the current and previous directory sysmbol which default occur
+
+      if(name.rfind(prefix, 0) == 0) {
+        matches.insert(name);
+      }
+    }
+    closedir(dp);
+  }
+
+  return std::vector<std::string>(matches.begin(), matches.end());
+}
+
 bool readLine(std::string& input) {
   termios oldt, newt;  // termios is a struct that holds the settings for terminal(colors, speed, modes)
   tcgetattr(STDIN_FILENO, &oldt);  // tcgetattr gets the current attributes of terminal
@@ -549,12 +570,21 @@ bool readLine(std::string& input) {
       }
     } else if(c == '\t') {  // TAB key (Autocomplete)
       tab_count++;
-      std::vector<std::string> matches = getCompletions(input);
+      std::string search_term = input;
+      std::vector<std::string> matches;
+
+      size_t last_space = input.find_last_of(' ');
+      if(last_space != std::string::npos) { // if no space was there the it fails and do else
+        search_term = input.substr(last_space + 1);
+        matches = getFileCompletions(search_term);
+      } else {
+        matches = getCompletions(search_term);
+      }
 
       // if found exactly one match, autocomplete it!
       if(matches.size() == 1) {
         // Grab the missing letters
-        std::string completion = matches[0].substr(input.length()) + " ";
+        std::string completion = matches[0].substr(search_term.length()) + " ";
         input += completion;
         // Print the missing letters to the screen
         write(STDOUT_FILENO, completion.c_str(), completion.length());
@@ -563,8 +593,8 @@ bool readLine(std::string& input) {
         std::string lcp = getLongestCommonPrefix(matches);
 
         if(lcp.length() > input.length()) {
-          std::string added_chars = lcp.substr(input.length());  // starts from ith index to end.
-          input = lcp;
+          std::string added_chars = lcp.substr(search_term.length());  // starts from ith index to end.
+          input += added_chars;
           write(STDOUT_FILENO, added_chars.c_str(), added_chars.length());
 
         } else {

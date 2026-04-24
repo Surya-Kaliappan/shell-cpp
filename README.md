@@ -130,7 +130,7 @@ This function `executeHistroy` add ons the condition to get the agrument '-a' to
 
 ### codecrafter/shell/history_presistence/read_history_on_startup
 
-This topic makes the huge difference to isolate the shell, because bash and zsh has their own history file to fetch history. so decide to create the own history file named '.myshell_history' to store only this shell's command history, this works like when start the shell it will write "export HISTFILE = /.myshell_history". here using chmod to secure the file for only owner. when the shell exit it will automatically saves the history to file.
+This topic makes the huge difference to isolate the shell, because bash and zsh has their own history file to fetch history. so decide to create the own history file named '.myshell_history' to store only this shell's command history, this works like when start the shell it will write "export HISTFILE = /.myshell_history". here using chmod to secure the file for only owner. when the shell exit it will automatically saves the history to file. This all done in `main` function.
 
 ### codecrafter/shell/history_presistence/write_history_on_exit
 
@@ -139,3 +139,9 @@ This was already done in previous stage.
 ### codecrafter/shell/history_presistence/append_history_on_exit
 
 This was already done in previous stage
+
+---
+
+### codecrafter/shell/filename_completion/file_completion
+
+This completion achieved by function named `getFileCompletion` which do the same as `getCompletion` but it has the list of current directory files. remaining working were changed little bit as adding remaining characters in the input has changed. now can able to get the single file name search at number of times.
