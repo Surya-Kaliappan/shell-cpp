@@ -506,11 +506,24 @@ std::vector<std::string> getFileCompletions(const std::string& search_term) {
       if(name == "." || name == "..") continue; // evade the current and previous directory sysmbol which default occur
 
       if(name.rfind(prefix, 0) == 0) {
-        if(last_slash != std::string::npos) {
-          matches.insert(dir_path + name);
-        } else {
-          matches.insert(name);
+        std::string full_path = (dir_path == "." ? name : dir_path + name);
+
+        struct stat statbuf;
+        bool is_dir = false;
+        if(stat(full_path.c_str(), &statbuf) == 0) { // tell to go and find the file and fills out the folder, if exists return 0.
+          if(S_ISDIR(statbuf.st_mode)) { // if stat() finish ok, then statbuf would have data. one of it variable struct is st_mode(permission + type details)
+            is_dir = true;              // This S_ISDIR check the signature of the directory with st_mode which has messy combination
+          }
         }
+
+        std::string match_str = (last_slash != std::string::npos) ? (dir_path + name) : name;
+        if(is_dir) {
+          match_str += "/";
+        } else {
+          match_str += " ";
+        }
+
+        matches.insert(match_str);
       }
     }
     closedir(dp);
@@ -597,7 +610,8 @@ bool readLine(std::string& input) {
       // if found exactly one match, autocomplete it!
       if(matches.size() == 1) {
         // Grab the missing letters
-        std::string completion = matches[0].substr(search_term.length()) + " ";
+        std::string completion = matches[0].substr(search_term.length());
+
         input += completion;
         // Print the missing letters to the screen
         write(STDOUT_FILENO, completion.c_str(), completion.length());

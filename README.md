@@ -149,3 +149,7 @@ This completion achieved by function named `getFileCompletion` which do the same
 ### codecrafter/shell/filename_completion/nested_file_completion
 
 This was totaly awesome, because already code were written for this condition, but hardcoded, so here just handle the inputs and assign the agrument which gives the required suggestion. main things are find last slash to get the path, by applying in `opendir()` which opens the directory to get details of its. everything has updated in `getFileCompletion`.
+
+### codecrafter/shell/filename_completion/directory_completion
+
+This completion required the logic changes in `getFileCompletion`. mainly stat(), S_ISDIR, and so on. these will check the directory or not and its details. if directory it ends with '/' or file it ends with ' '.
