@@ -15,6 +15,7 @@
 // Global Constants
 const std::vector<std::string> BUILTINS = {"echo", "exit", "type", "pwd", "cd", "history"};
 std::vector<std::string> command_history;
+size_t history_sync_index = 0;
 
 // funtion to split the command and arguments and respect quotes
 std::vector<std::string> parseInput(const std::string& input) {
@@ -169,8 +170,27 @@ void executeHistory(const std::vector<std::string>& tokens) {
         outfile << command_history[i] << "\n";  // outfile would handle the recieved data to write in file
       }
       outfile.close(); // close the connection
+      history_sync_index = command_history.size(); // update the sync value
     } else {
       std::cerr << "history: " << file_path << ": cannot create file\n";
+    }
+    return;
+  }
+
+  // Append the history file
+  if(tokens.size() >= 3 && tokens[1] == "-a") {
+    std::string file_path = tokens[2];
+
+    std::ofstream outfile(file_path, std::ios::app); // ios::app would tell the stream to change append mode
+
+    if(outfile.is_open()) {
+      for(size_t i=history_sync_index; i<command_history.size(); i++) {
+        outfile << command_history[i] << "\n";
+      }
+      outfile.close();
+      history_sync_index = command_history.size(); // update the sync value
+    } else {
+      std::cerr << "history: " << file_path << ": cannot open file\n";
     }
     return;
   }

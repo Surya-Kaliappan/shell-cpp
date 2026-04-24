@@ -123,3 +123,7 @@ The function `executeHistory` has changed find the argument to read the commands
 ### codecrafter/shell/history_presistence/write_history_file
 
 This function `executeHistory` add ons the condition to get the argument '-w' to write the file with the help of ofstream to manage the file to write and create if not exists. it only write not append
+
+### codecrafter/shell/history_presistence/append_history_file
+
+This function `executeHistroy` add ons the condition to get the agrument '-a' to append the commands to file with help of ofstream with extra iso::app argument, to enable append mode. it will append the commands since the last append happened.
