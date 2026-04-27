@@ -165,3 +165,17 @@ This was also implemented early in function `readLine`. already condition that p
 ### codecrafter/shell/filename_completion/multi_argument_completions
 
 This was also completed in previous stages in function `readLine`. as same as like executable completion.
+
+---
+
+### codecrafter/shell/background_jobs/jobs_builtin
+
+This 'JOBS' concept is a huge one. so from here it going step by step to achieve it. as the first step it has been register as builtin. This command is used to keep the parent to continue, even the child is still working as backgorund. controlling the background childs is the one line.
+
+### codecrafter/shell/background_jobs/starting_background_jobs
+
+Here start to create the child process and keep tracking. for this, creating the global variables and struct to maintain the job list, vector to store the struct and add on argument in `executeExternal` which is 'is_background' which make to stop the parent to wait for child to complete which is execute waitpid() which condition fails. otherwise it add struct with its pid details and add in vector. finally print the pid and list number of child process.
+
+### codecrafter/shell/background_jobs/printing_background_job_output
+
+This is nothing but print the child process's STDOUT in the terminal, by using C++ is ok, but other languages like node, keep the wire of File Descriptors unplug. if want should mention in code, but C++ doesn't need that. defaultly all plugged. So the child process can also print in the same place where parent prints.
