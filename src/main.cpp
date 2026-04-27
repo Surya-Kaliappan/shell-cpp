@@ -218,7 +218,13 @@ void executeHistory(const std::vector<std::string>& tokens) {
   }
 }
 
-void executeJobs() {}
+void executeJobs() {
+  for(size_t i=0; i<background_jobs.size(); i++) {
+    std::cout << "[" << background_jobs[i].job_id << "]+  ";
+    std::cout << std::left << std::setw(24) << "Running";
+    std::cout << background_jobs[i].command << "&\n";
+  }
+}
 
 // EXTERNAL functions
 // function to execute external programs

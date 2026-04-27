@@ -179,3 +179,7 @@ Here start to create the child process and keep tracking. for this, creating the
 ### codecrafter/shell/background_jobs/printing_background_job_output
 
 This is nothing but print the child process's STDOUT in the terminal, by using C++ is ok, but other languages like node, keep the wire of File Descriptors unplug. if want should mention in code, but C++ doesn't need that. defaultly all plugged. So the child process can also print in the same place where parent prints.
+
+### codecrafter/shell/background_jobs/list_a_single_job
+
+this is nothing but print the list of child process which was stored in the struct vector. nothing more than complex steps.
