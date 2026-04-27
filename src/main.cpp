@@ -619,7 +619,7 @@ bool readLine(std::string& input) {
       } else if(matches.size() > 1) {
         std::string lcp = getLongestCommonPrefix(matches);
 
-        if(lcp.length() > input.length()) {
+        if(lcp.length() > search_term.length()) {
           std::string added_chars = lcp.substr(search_term.length());  // starts from ith index to end.
           input += added_chars;
           write(STDOUT_FILENO, added_chars.c_str(), added_chars.length());
