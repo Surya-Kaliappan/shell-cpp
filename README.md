@@ -157,3 +157,11 @@ This completion required the logic changes in `getFileCompletion`. mainly stat()
 ### codecrafter/shell/filename_completion/missing_completions
 
 This was already implemented in `readLine` function, which is like once there is no finds then it will print "\a" and input remains untouched.
+
+### codecrafter/shell/filename_completion/multiple_matches
+
+This was also implemented early in function `readLine`. already condition that print the result in sorted way. and next line print he search value to complete.
+
+### codecrafter/shell/filename_completion/multi_argument_completions
+
+This was also completed in previous stages in function `readLine`. as same as like executable completion.
