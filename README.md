@@ -191,3 +191,7 @@ In this stage, just add the printing indication to make among list of jobs. whic
 ### codecrafter/shell/background_jobs/reap_one_job
 
 In this stage, just note the reaped process and update the global vector by showing status as done and remove from in it. To find the job done by using 'waitpid()' with 'WNOHANG' argument, to avoid wait until child dead to continue.
+
+### codecrafter/shell/background_jobs/reap_multiple_jobs
+
+Here nothing to change because last stage was handle this situation, but that stage was suppose to check one job, but that was nothing to mean by implement, so check for multiple. nothing to change in anywhere.

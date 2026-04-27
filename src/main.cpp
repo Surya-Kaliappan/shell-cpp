@@ -234,7 +234,7 @@ void executeJobs() {
     if(result == 0) {
       std::cout << "[" << background_jobs[i].job_id << "]" << marker << "  ";
       std::cout << std::left << std::setw(24) << "Running";
-      std::cout << background_jobs[i].command << "&\n";
+      std::cout << background_jobs[i].command << " &\n";
 
       active_jobs.push_back(background_jobs[i]);
     } else if(result > 0 || result == -1) {
