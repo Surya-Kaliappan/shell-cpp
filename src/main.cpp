@@ -14,9 +14,17 @@
 #include <sys/stat.h> // for chmod()
 
 // Global Constants
-const std::vector<std::string> BUILTINS = {"echo", "exit", "type", "pwd", "cd", "history"};
+struct Job {
+  int job_id;
+  pid_t pid;
+  std::string command;
+};
+
+const std::vector<std::string> BUILTINS = {"echo", "exit", "type", "pwd", "cd", "history", "jobs"};
 std::vector<std::string> command_history;
 size_t history_sync_index = 0;
+std::vector<Job> background_jobs;
+int next_job_id = 1;
 
 // funtion to split the command and arguments and respect quotes
 std::vector<std::string> parseInput(const std::string& input) {
@@ -210,9 +218,11 @@ void executeHistory(const std::vector<std::string>& tokens) {
   }
 }
 
+void executeJobs() {}
+
 // EXTERNAL functions
 // function to execute external programs
-void executeExternal(const std::vector<std::string>& tokens) {
+void executeExternal(const std::vector<std::string>& tokens, bool is_background = false) {
   std::vector<char*> c_args;  // char* is used to store string like in C.
 
   for(size_t i=0; i<tokens.size(); i++) {
@@ -225,9 +235,22 @@ void executeExternal(const std::vector<std::string>& tokens) {
     execvp(c_args[0], c_args.data()); // This will execute the command in child process
     std::cerr << tokens[0] << ": command not found\n"; // if the process success then this line won't work unless failed
     exit(1);
-  } else if(pid > 0) {  // pid_t waitpid(pid_t pid, int *status, int options);
-    int status;  // this vaiable will hold the exit status of the child process
-    waitpid(pid, &status, 0); // wait for the child process to finish
+  } else if(pid > 0) {
+    if(is_background) { // just ask to don't wait for child to complete
+      std::string cmd_str = "";
+      for(size_t i=0; i<tokens.size(); i++) {
+        cmd_str += tokens[i] + (i == tokens.size() - 1 ? "" : " ");
+      }
+
+      Job new_job = {next_job_id++, pid, cmd_str}; // create the struct
+      background_jobs.push_back(new_job); // store the struct
+
+      std::cout << "[" << new_job.job_id << "]" << new_job.pid << "\n";
+    } else { // ask to wait for child to complete
+      int status;  // this vaiable will hold the exit status of the child process
+      // pid_t waitpid(pid_t pid, int *status, int options);
+      waitpid(pid, &status, 0); // wait for the child process to finish
+    }
   } else {
     std::cerr << "Fork failed\n";
   }
@@ -240,6 +263,7 @@ bool runBuiltin(const std::vector<std::string>& tokens) {
 
   if(cmd == "echo") { executeEcho(tokens); return true; }
   if(cmd == "history") { executeHistory(tokens); return true; }
+  if(cmd == "jobs") { executeJobs(); return true; }
   if(cmd == "type") { if(tokens.size() > 1) checkType(tokens[1]); return true; }
   if(cmd == "pwd") { executePwd(); return true; }
   if(cmd == "cd") { if(tokens.size() > 1) executeCd(tokens[1]); return true; }
@@ -339,6 +363,15 @@ bool executePipeline(const std::vector<std::string>& tokens) {
 bool executeCommand(std::vector<std::string>& tokens) {
   if(tokens.empty()) return true;
 
+  // check the background job assign
+  bool is_background = false;
+  if(tokens.back() == "&") {
+    is_background = true;
+    tokens.pop_back(); // remove the last token "&"
+  }
+
+  if(tokens.empty()) return true;
+
   // separately check the pipe occurance in the command
   for(size_t i=0; i<tokens.size(); i++) {
     if(tokens[i] == "|") {
@@ -411,7 +444,7 @@ bool executeCommand(std::vector<std::string>& tokens) {
 
   // Routing table
   if(!runBuiltin(tokens)){
-    executeExternal(tokens);
+    executeExternal(tokens, is_background);
   }
 
   // restore redirection
