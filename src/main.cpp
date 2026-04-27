@@ -219,8 +219,15 @@ void executeHistory(const std::vector<std::string>& tokens) {
 }
 
 void executeJobs() {
+  size_t num_jobs = background_jobs.size();
+
   for(size_t i=0; i<background_jobs.size(); i++) {
-    std::cout << "[" << background_jobs[i].job_id << "]+  ";
+
+    char marker = ' '; // default to a blank space
+    if(i == num_jobs-1) marker = '+';
+    else if(i == num_jobs-2) marker = '-';
+    
+    std::cout << "[" << background_jobs[i].job_id << "]" << marker << "  ";
     std::cout << std::left << std::setw(24) << "Running";
     std::cout << background_jobs[i].command << "&\n";
   }
