@@ -152,4 +152,8 @@ This was totaly awesome, because already code were written for this condition, b
 
 ### codecrafter/shell/filename_completion/directory_completion
 
-This completion required the logic changes in `getFileCompletion`. mainly stat(), S_ISDIR, and so on. these will check the directory or not and its details. if directory it ends with '/' or file it ends with ' '.
+This completion required the logic changes in `getFileCompletion`. mainly stat(), S_ISDIR, and so on. that will check the directory or not and its details. if directory it ends with '/' or file it ends with ' '.
+
+### codecrafter/shell/filename_completion/missing_completions
+
+This was already implemented in `readLine` function, which is like once there is no finds then it will print "\a" and input remains untouched.
