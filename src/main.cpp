@@ -220,17 +220,30 @@ void executeHistory(const std::vector<std::string>& tokens) {
 
 void executeJobs() {
   size_t num_jobs = background_jobs.size();
+  std::vector<Job> active_jobs; // Temporary ledger for working child process
 
   for(size_t i=0; i<background_jobs.size(); i++) {
 
     char marker = ' '; // default to a blank space
     if(i == num_jobs-1) marker = '+';
     else if(i == num_jobs-2) marker = '-';
-    
-    std::cout << "[" << background_jobs[i].job_id << "]" << marker << "  ";
-    std::cout << std::left << std::setw(24) << "Running";
-    std::cout << background_jobs[i].command << "&\n";
+
+    int status;
+    pid_t result = waitpid(background_jobs[i].pid, &status, WNOHANG); // ping the OS without freezing
+
+    if(result == 0) {
+      std::cout << "[" << background_jobs[i].job_id << "]" << marker << "  ";
+      std::cout << std::left << std::setw(24) << "Running";
+      std::cout << background_jobs[i].command << "&\n";
+
+      active_jobs.push_back(background_jobs[i]);
+    } else if(result > 0 || result == -1) {
+      std::cout << "[" << background_jobs[i].job_id << "]" << marker << "  ";
+      std::cout << std::left << std::setw(24) << "Done";
+      std::cout << background_jobs[i].command << "\n";
+    }
   }
+  background_jobs = active_jobs; // stores the updated one which means remove the child shown as done
 }
 
 // EXTERNAL functions

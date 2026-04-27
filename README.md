@@ -187,3 +187,7 @@ This is nothing but print the list of child process which was stored in the stru
 ### codecrafter/shell/background_jobs/list_multiple_jobs
 
 In this stage, just add the printing indication to make among list of jobs. which is last created child process are mark as '+' and before the last created are mark as '-', rest are blank. this changes are happen in function `ExecuteJobs`
+
+### codecrafter/shell/background_jobs/reap_one_job
+
+In this stage, just note the reaped process and update the global vector by showing status as done and remove from in it. To find the job done by using 'waitpid()' with 'WNOHANG' argument, to avoid wait until child dead to continue.
