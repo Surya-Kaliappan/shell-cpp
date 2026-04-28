@@ -195,3 +195,7 @@ In this stage, just note the reaped process and update the global vector by show
 ### codecrafter/shell/background_jobs/reap_multiple_jobs
 
 Here nothing to change because last stage was handle this situation, but that stage was suppose to check one job, but that was nothing to mean by implement, so check for multiple. nothing to change in anywhere.
+
+### codecrafter/shell/background_jobs/reap_before_next_prompt
+
+This is the hardest one because it should run optimistically, so add one field in struct as 'is_running' which tracks the status of child process. and update the function `executeJobs` to get the agrument to print all and print done jobs. this categorize the jobs by its is_running to make it separate, if done it will remove from the background_jobs vector.
