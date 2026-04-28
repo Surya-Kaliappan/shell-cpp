@@ -18,6 +18,7 @@ struct Job {
   int job_id;
   pid_t pid;
   std::string command;
+  bool is_running;
 };
 
 const std::vector<std::string> BUILTINS = {"echo", "exit", "type", "pwd", "cd", "history", "jobs"};
@@ -218,32 +219,38 @@ void executeHistory(const std::vector<std::string>& tokens) {
   }
 }
 
-void executeJobs() {
-  size_t num_jobs = background_jobs.size();
-  std::vector<Job> active_jobs; // Temporary ledger for working child process
+void executeJobs(bool show_all) {
+  if(background_jobs.empty()) return;
 
-  for(size_t i=0; i<background_jobs.size(); i++) {
+  std::vector<Job> active_jobs; // update the active jobs to confirm at final
+  size_t n = background_jobs.size();
 
-    char marker = ' '; // default to a blank space
-    if(i == num_jobs-1) marker = '+';
-    else if(i == num_jobs-2) marker = '-';
+  for(size_t i=0; i<n; i++) {
+    Job& job = background_jobs[i]; // take the job reference instead of copy, cause it affect the original if changes happen
 
-    int status;
-    pid_t result = waitpid(background_jobs[i].pid, &status, WNOHANG); // ping the OS without freezing
+    if(job.is_running) {
+      int status;
+      if(waitpid(job.pid, &status, WNOHANG) > 0) { // check child status and move on, if working it return 0
+        job.is_running = false; // this changes the status of child as finished by use of pointer directly
+      }
+    }
 
-    if(result == 0) {
-      std::cout << "[" << background_jobs[i].job_id << "]" << marker << "  ";
-      std::cout << std::left << std::setw(24) << "Running";
-      std::cout << background_jobs[i].command << " &\n";
+    if(show_all || !job.is_running) { // if jobs hit show_all will true, if false then it should show the done process for that avoid the running process
+      char marker = (i == n-1) ? '+' : (i == n-2) ? '-' : ' ';
+      std::string state = job.is_running ? "Running" : "Done";
+      std::string ampersand = job.is_running ? " &" : "";
 
-      active_jobs.push_back(background_jobs[i]);
-    } else if(result > 0 || result == -1) {
-      std::cout << "[" << background_jobs[i].job_id << "]" << marker << "  ";
-      std::cout << std::left << std::setw(24) << "Done";
-      std::cout << background_jobs[i].command << "\n";
+      std::cout << "[" << job.job_id << "]" << marker << "  "
+                << std::left << std::setw(24) << state
+                << job.command << ampersand << "\n";
+    }
+
+    if(job.is_running) {
+      active_jobs.push_back(job); // if process running then update in active job.
     }
   }
-  background_jobs = active_jobs; // stores the updated one which means remove the child shown as done
+
+  background_jobs = active_jobs; // At final assign the active job to background jobs, just like update the background_jobs but not all value just pointer.
 }
 
 // EXTERNAL functions
@@ -268,7 +275,7 @@ void executeExternal(const std::vector<std::string>& tokens, bool is_background 
         cmd_str += tokens[i] + (i == tokens.size() - 1 ? "" : " ");
       }
 
-      Job new_job = {next_job_id++, pid, cmd_str}; // create the struct
+      Job new_job = {next_job_id++, pid, cmd_str, true}; // create the struct
       background_jobs.push_back(new_job); // store the struct
 
       std::cout << "[" << new_job.job_id << "]" << new_job.pid << "\n";
@@ -289,7 +296,7 @@ bool runBuiltin(const std::vector<std::string>& tokens) {
 
   if(cmd == "echo") { executeEcho(tokens); return true; }
   if(cmd == "history") { executeHistory(tokens); return true; }
-  if(cmd == "jobs") { executeJobs(); return true; }
+  if(cmd == "jobs") { executeJobs(true); return true; }
   if(cmd == "type") { if(tokens.size() > 1) checkType(tokens[1]); return true; }
   if(cmd == "pwd") { executePwd(); return true; }
   if(cmd == "cd") { if(tokens.size() > 1) executeCd(tokens[1]); return true; }
@@ -751,6 +758,7 @@ int main() {
   std::string input;
 
   while(true) {
+    executeJobs(false); // check job details before every command executes
     std::cout << "\n$ ";
 
     if(!readLine(input)) break;  // exit if Ctrl-D is pressed
