@@ -27,6 +27,24 @@ size_t history_sync_index = 0;
 std::vector<Job> background_jobs;
 int next_job_id = 1;
 
+int getNextAvailableJobId() {
+  int id = 1;
+  while (true) {
+    bool in_use = false;
+    for(size_t i=0; i<background_jobs.size(); i++) {
+      if(background_jobs[i].job_id == id) {
+        in_use = true;
+        break;
+      }
+    }
+
+    if(!in_use) {
+      return id;
+    }
+    id++;
+  }
+}
+
 // funtion to split the command and arguments and respect quotes
 std::vector<std::string> parseInput(const std::string& input) {
   std::vector<std::string> args;
@@ -275,7 +293,8 @@ void executeExternal(const std::vector<std::string>& tokens, bool is_background 
         cmd_str += tokens[i] + (i == tokens.size() - 1 ? "" : " ");
       }
 
-      Job new_job = {next_job_id++, pid, cmd_str, true}; // create the struct
+      int assigned_id = getNextAvailableJobId();
+      Job new_job = {assigned_id, pid, cmd_str, true}; // create the struct
       background_jobs.push_back(new_job); // store the struct
 
       std::cout << "[" << new_job.job_id << "]" << new_job.pid << "\n";
