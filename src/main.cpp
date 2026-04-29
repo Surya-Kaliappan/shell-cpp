@@ -21,7 +21,7 @@ struct Job {
   bool is_running;
 };
 
-const std::vector<std::string> BUILTINS = {"echo", "exit", "type", "pwd", "cd", "history", "jobs"};
+const std::vector<std::string> BUILTINS = {"echo", "exit", "type", "pwd", "cd", "history", "jobs", "complete"};
 std::vector<std::string> command_history;
 size_t history_sync_index = 0;
 std::vector<Job> background_jobs;
@@ -271,6 +271,13 @@ void executeJobs(bool show_all) {
   background_jobs = active_jobs; // At final assign the active job to background jobs, just like update the background_jobs but not all value just pointer.
 }
 
+void executeComplete(const std::vector<std::string>& tokens) {
+  if(tokens.size() >= 3 && tokens[1] == "-p") {
+    std::string target_cmd = tokens[2];
+    std::cout << "complete: " << target_cmd << ": no completion specification\n";
+  }
+}
+
 // EXTERNAL functions
 // function to execute external programs
 void executeExternal(const std::vector<std::string>& tokens, bool is_background = false) {
@@ -316,6 +323,7 @@ bool runBuiltin(const std::vector<std::string>& tokens) {
   if(cmd == "echo") { executeEcho(tokens); return true; }
   if(cmd == "history") { executeHistory(tokens); return true; }
   if(cmd == "jobs") { executeJobs(true); return true; }
+  if(cmd == "complete") { executeComplete(tokens); return true; }
   if(cmd == "type") { if(tokens.size() > 1) checkType(tokens[1]); return true; }
   if(cmd == "pwd") { executePwd(); return true; }
   if(cmd == "cd") { if(tokens.size() > 1) executeCd(tokens[1]); return true; }

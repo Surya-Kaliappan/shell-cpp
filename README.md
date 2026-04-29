@@ -203,3 +203,13 @@ This is the hardest one because it should run optimistically, so add one field i
 ### codecrafter/shell/background_jobs/recycle_job_numbers
 
 This stage asked to handle the job_id for creating new jobs after finished already created. because increasing go on isn't solution, so use the finished slot for new one. for this created a new function named `getNextAvailableJobId` which handles the job_id free in between and assign, like it return the integer, and before going to create job struct it will pass as parameter.
+
+---
+
+### codecrafter/shell/programmable_completion/complete_builtin
+
+This programmable completion is thing which extra connection for completion for specific tools like git, git has its own completion file which help the programmable file to add ons the extra completion names of tools. here just add the complete in builtins list.
+
+### codecrafter/shell/programmable_completion/printing_missing_specifications
+
+This stage accepts '-p' as flag which prints the completion specification. for now it just print to no completion specification by creating function named `executeComplete`.
