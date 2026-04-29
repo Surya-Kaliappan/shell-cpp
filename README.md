@@ -217,3 +217,7 @@ This stage accepts '-p' as flag which prints the completion specification. for n
 ### codecrafter/shell/programmable_completion/displaying_registered_specification
 
 In this stage add the completion path of tool in programmable completion in unordered_map. this will entry the path with key name in unordered_map, incase the path updated then it will update in unordered_map as well. This all updated in function `executeComplete`.
+
+### codecrafter/shell/programmable_completion/single_completion
+
+In this stage use the stored registered specification to get the list of result, but result weren't get from normal file, it should be executable file(os will defaultly uses /bin/sh), which executes in RAM and this program easily gets that list from RAM. here used 'fopen' which automatically executes the pipe system and executes if path for executable. this all done in function `getProgrammableCompletions`.

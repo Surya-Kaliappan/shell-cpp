@@ -13,6 +13,7 @@
 #include <fstream> // for std::ifstream
 #include <sys/stat.h> // for chmod()
 #include <unordered_map>
+#include <stdio.h> // for popen() and pclose()
 
 // Global Constants
 struct Job {
@@ -593,6 +594,30 @@ std::string getLongestCommonPrefix(const std::vector<std::string>& matches) {
   return prefix;
 }
 
+std::vector<std::string> getProgrammableCompletions(const std::string& script_path, const std::string& base_cmd, const std::string& search_term) {
+  std::vector<std::string> results;
+
+  std::string cmd = script_path + " " + base_cmd + " '" + search_term + "'";
+
+  FILE* pipe = popen(cmd.c_str(), "r");
+  if(!pipe) return results;
+
+  char buffer[1024];
+  while(fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+    std::string line(buffer);
+    if(!line.empty() && line.back() == '\n') {
+      line.pop_back();
+    }
+    if(!line.empty() && line.rfind(search_term, 0) == 0) {
+      line += " ";
+      results.push_back(line);
+    }
+  }
+
+  pclose(pipe);
+  return results;  
+}
+
 std::vector<std::string> getFileCompletions(const std::string& search_term) {
   std::set<std::string> matches;
 
@@ -710,7 +735,13 @@ bool readLine(std::string& input) {
       size_t last_space = input.find_last_of(' ');
       if(last_space != std::string::npos) { // if no space was there the it fails and do else
         search_term = input.substr(last_space + 1);
-        matches = getFileCompletions(search_term);
+        std::string base_cmd = input.substr(0, input.find_first_of(' '));
+
+        if(completion_scripts.find(base_cmd) != completion_scripts.end()) {
+          matches = getProgrammableCompletions(completion_scripts[base_cmd], base_cmd, search_term);
+        } else {
+          matches = getFileCompletions(search_term);
+        }
       } else {
         matches = getCompletions(search_term);
       }
