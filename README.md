@@ -213,3 +213,7 @@ This programmable completion is thing which extra connection for completion for 
 ### codecrafter/shell/programmable_completion/printing_missing_specifications
 
 This stage accepts '-p' as flag which prints the completion specification. for now it just print to no completion specification by creating function named `executeComplete`.
+
+### codecrafter/shell/programmable_completion/displaying_registered_specification
+
+In this stage add the completion path of tool in programmable completion in unordered_map. this will entry the path with key name in unordered_map, incase the path updated then it will update in unordered_map as well. This all updated in function `executeComplete`.

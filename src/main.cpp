@@ -12,6 +12,7 @@
 #include <iomanip> // for std::setw()
 #include <fstream> // for std::ifstream
 #include <sys/stat.h> // for chmod()
+#include <unordered_map>
 
 // Global Constants
 struct Job {
@@ -25,7 +26,7 @@ const std::vector<std::string> BUILTINS = {"echo", "exit", "type", "pwd", "cd", 
 std::vector<std::string> command_history;
 size_t history_sync_index = 0;
 std::vector<Job> background_jobs;
-int next_job_id = 1;
+std::unordered_map<std::string, std::string> completion_scripts;
 
 int getNextAvailableJobId() {
   int id = 1;
@@ -272,9 +273,23 @@ void executeJobs(bool show_all) {
 }
 
 void executeComplete(const std::vector<std::string>& tokens) {
-  if(tokens.size() >= 3 && tokens[1] == "-p") {
+  if(tokens.size() < 3) return;
+
+  std::string flag = tokens[1];
+
+  if(flag == "-C" && tokens.size() >= 4) {
+    std::string script_path = tokens[2];
+    std::string target_cmd = tokens[3];
+
+    completion_scripts[target_cmd] = script_path;
+  } else if(flag == "-p") {
     std::string target_cmd = tokens[2];
-    std::cout << "complete: " << target_cmd << ": no completion specification\n";
+
+    if(completion_scripts.find(target_cmd) != completion_scripts.end()) {
+      std::cout << "complete -C '" << completion_scripts[target_cmd] << "' " << target_cmd << "\n";
+    } else {
+      std::cout << "complete: " << target_cmd << ": no completion specification\n";
+    }
   }
 }
 
