@@ -229,3 +229,7 @@ This stage has nothing to do beacuse this was completed.
 ### codecrafter/shell/programmable_completion/passing_command-line_argument
 
 This stage makes analyze every input parse to check the previous word to make the dynamic the auto complete result list. this all updated in `readLine` and add thrid argument in `getProgrammableCompletions` as 'previous_word'.
+
+### codecrafter/shell/programmable_completion/passing_environment_variables
+
+This stage were done with adding argument in function `getProgrammableCompletions` as 'full_input', it is nothing but passing the typed command which some completers also need to know the full command line and where the cursor is.

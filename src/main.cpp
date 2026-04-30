@@ -594,13 +594,20 @@ std::string getLongestCommonPrefix(const std::vector<std::string>& matches) {
   return prefix;
 }
 
-std::vector<std::string> getProgrammableCompletions(const std::string& script_path, const std::string& base_cmd, const std::string& search_term, const std::string& previous_word) {
+std::vector<std::string> getProgrammableCompletions(const std::string& script_path, const std::string& base_cmd, const std::string& search_term, const std::string& previous_word, const std::string& full_input) {
   std::vector<std::string> results;
+
+  setenv("COMP_LINE", full_input.c_str(), 1);
+  setenv("COMP_POINT", std::to_string(full_input.length()).c_str(), 1);
 
   std::string cmd = script_path + " " + base_cmd + " '" + search_term + "' '" + previous_word + "'";
 
   FILE* pipe = popen(cmd.c_str(), "r"); // automatically creates pipe, set wires, and execvp the string passed
-  if(!pipe) return results;
+  if(!pipe) {
+    unsetenv("COMP_LINE");
+    unsetenv("COMP_POINT");
+    return results;
+  }
 
   char buffer[1024];
   while(fgets(buffer, sizeof(buffer), pipe) != nullptr) { // This collect the result byte by byte from pipe to store in buffer
@@ -615,6 +622,8 @@ std::vector<std::string> getProgrammableCompletions(const std::string& script_pa
   }
 
   pclose(pipe);
+  unsetenv("COMP_LINE");
+  unsetenv("COMP_POINT");
   return results;  
 }
 
@@ -751,7 +760,7 @@ bool readLine(std::string& input) {
         }
 
         if(completion_scripts.find(base_cmd) != completion_scripts.end()) {
-          matches = getProgrammableCompletions(completion_scripts[base_cmd], base_cmd, search_term, previous_word);
+          matches = getProgrammableCompletions(completion_scripts[base_cmd], base_cmd, search_term, previous_word, input);
         } else {
           matches = getFileCompletions(search_term);
         }
