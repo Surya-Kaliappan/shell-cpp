@@ -237,3 +237,11 @@ This stage were done with adding argument in function `getProgrammableCompletion
 ### codecrafter/shell/programmable_completion/multiple_completer_candidates
 
 This was already done in `readLine` function just like few stages ago. but here we should keep the results in sort way, so just add the sort function line function `getProgrammableCompletions`.
+
+### codecrafter/shell/programmable_completion/longest_common_prefix
+
+No need to change anything, because already done this in preivous stages. 
+
+### codecrafter/shell/programmable_completion/unregister_completion
+
+This stage is not a huge task, it means to remove the completer register from storage(unordered_job). accept the argument '-r' to trigger this code. This updated in funtion `executeComplete`.

@@ -291,6 +291,10 @@ void executeComplete(const std::vector<std::string>& tokens) {
     } else {
       std::cout << "complete: " << target_cmd << ": no completion specification\n";
     }
+  } else if(flag == "-r") {
+    std::string target_cmd = tokens[2];
+
+    completion_scripts.erase(target_cmd);
   }
 }
 
