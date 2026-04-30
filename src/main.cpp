@@ -594,16 +594,16 @@ std::string getLongestCommonPrefix(const std::vector<std::string>& matches) {
   return prefix;
 }
 
-std::vector<std::string> getProgrammableCompletions(const std::string& script_path, const std::string& base_cmd, const std::string& search_term) {
+std::vector<std::string> getProgrammableCompletions(const std::string& script_path, const std::string& base_cmd, const std::string& search_term, const std::string& previous_word) {
   std::vector<std::string> results;
 
-  std::string cmd = script_path + " " + base_cmd + " '" + search_term + "'";
+  std::string cmd = script_path + " " + base_cmd + " '" + search_term + "' '" + previous_word + "'";
 
-  FILE* pipe = popen(cmd.c_str(), "r");
+  FILE* pipe = popen(cmd.c_str(), "r"); // automatically creates pipe, set wires, and execvp the string passed
   if(!pipe) return results;
 
   char buffer[1024];
-  while(fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+  while(fgets(buffer, sizeof(buffer), pipe) != nullptr) { // This collect the result byte by byte from pipe to store in buffer
     std::string line(buffer);
     if(!line.empty() && line.back() == '\n') {
       line.pop_back();
@@ -737,8 +737,21 @@ bool readLine(std::string& input) {
         search_term = input.substr(last_space + 1);
         std::string base_cmd = input.substr(0, input.find_first_of(' '));
 
+        std::string previous_word = "";
+        size_t prev_end = input.find_last_not_of(' ', last_space); // find the character which is before the given string in reverse order
+
+        if(prev_end != std::string::npos) {
+          size_t prev_start = input.find_last_of(' ', prev_end); // 2nd parameter set the end value to find within it
+          if(prev_start == std::string::npos) {
+            prev_start = 0;
+          } else {
+            prev_start++;
+          }
+          previous_word = input.substr(prev_start, prev_end - prev_start + 1);
+        }
+
         if(completion_scripts.find(base_cmd) != completion_scripts.end()) {
-          matches = getProgrammableCompletions(completion_scripts[base_cmd], base_cmd, search_term);
+          matches = getProgrammableCompletions(completion_scripts[base_cmd], base_cmd, search_term, previous_word);
         } else {
           matches = getFileCompletions(search_term);
         }

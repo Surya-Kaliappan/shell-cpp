@@ -225,3 +225,7 @@ In this stage use the stored registered specification to get the list of result,
 ### codecrafter/shell/programmable_completion/handling_no_completions
 
 This stage has nothing to do beacuse this was completed.
+
+### codecrafter/shell/programmable_completion/passing_command-line_argument
+
+This stage makes analyze every input parse to check the previous word to make the dynamic the auto complete result list. this all updated in `readLine` and add thrid argument in `getProgrammableCompletions` as 'previous_word'.
