@@ -624,6 +624,8 @@ std::vector<std::string> getProgrammableCompletions(const std::string& script_pa
   pclose(pipe);
   unsetenv("COMP_LINE");
   unsetenv("COMP_POINT");
+
+  std::sort(results.begin(), results.end());
   return results;  
 }
 

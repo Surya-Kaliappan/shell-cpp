@@ -233,3 +233,7 @@ This stage makes analyze every input parse to check the previous word to make th
 ### codecrafter/shell/programmable_completion/passing_environment_variables
 
 This stage were done with adding argument in function `getProgrammableCompletions` as 'full_input', it is nothing but passing the typed command which some completers also need to know the full command line and where the cursor is.
+
+### codecrafter/shell/programmable_completion/multiple_completer_candidates
+
+This was already done in `readLine` function just like few stages ago. but here we should keep the results in sort way, so just add the sort function line function `getProgrammableCompletions`.
