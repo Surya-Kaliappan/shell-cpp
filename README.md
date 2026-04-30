@@ -221,3 +221,7 @@ In this stage add the completion path of tool in programmable completion in unor
 ### codecrafter/shell/programmable_completion/single_completion
 
 In this stage use the stored registered specification to get the list of result, but result weren't get from normal file, it should be executable file(os will defaultly uses /bin/sh), which executes in RAM and this program easily gets that list from RAM. here used 'fopen' which automatically executes the pipe system and executes if path for executable. this all done in function `getProgrammableCompletions`.
+
+### codecrafter/shell/programmable_completion/handling_no_completions
+
+This stage has nothing to do beacuse this was completed.
