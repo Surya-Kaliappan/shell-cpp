@@ -15,12 +15,19 @@ struct Job {
     bool is_running;
 };
 
+struct Config {
+    std::string prompt_color = "\033[1;32m"; // default green
+    bool show_username = true;
+    bool enable_suggestions = true;
+};
+
 // Global Variables
 extern std::vector<std::string> command_history;
 extern size_t history_sync_index;
 extern std::vector<Job> background_jobs;
 extern std::unordered_map<std::string, std::string> completion_scripts;
 extern const std::vector<std::string> BUILTINS;
+extern Config shell_config;
 
 // Functions
 // Parser
@@ -51,5 +58,10 @@ std::vector<std::string> getFileCompletions(const std::string& search_term);
 // UI / IO
 bool readLine(std::string& input);
 int getNextAvailableJobId();
+
+// Config Engine
+void loadConfig();
+void saveConfig();
+void showConfigUI();
 
 #endif // SHELL_H

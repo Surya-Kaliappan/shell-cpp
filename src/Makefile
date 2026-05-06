@@ -6,7 +6,7 @@ CXXFLAGS = -Wall -Wextra -std=c++17
 TARGET = myshell
 
 # The source files we are going to create
-SRCS = main.cpp parser.cpp builtins.cpp execution.cpp autocomplete.cpp ui.cpp
+SRCS = main.cpp parser.cpp builtins.cpp execution.cpp autocomplete.cpp ui.cpp config.cpp
 
 # Convert .cpp names to .o (object) names
 OBJS = $(SRCS:.cpp=.o)

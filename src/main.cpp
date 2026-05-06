@@ -8,10 +8,17 @@ size_t history_sync_index = 0;
 std::vector<Job> background_jobs;
 std::unordered_map<std::string, std::string> completion_scripts;
 const std::vector<std::string> BUILTINS = {"echo", "exit", "type", "pwd", "cd", "history", "jobs", "complete"};
+Config shell_config;
 
-int main() {
+int main(int argc, char** argv) {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
+    loadConfig();
+
+    if(argc > 1 && std::string(argv[1]) == "--config") {
+        showConfigUI();
+        return 0;
+    }
 
     std::string histfile_path = "";
     const char* home_env = std::getenv("HOME");
