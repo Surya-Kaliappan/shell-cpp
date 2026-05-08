@@ -17,7 +17,7 @@ struct Job {
 
 struct Config {
     std::string prompt_color = "\033[1;32m"; // default green
-    bool show_username = true;
+    std::string prompt_symbol = "$";
     bool enable_suggestions = true;
 };
 
@@ -63,5 +63,6 @@ int getNextAvailableJobId();
 void loadConfig();
 void saveConfig();
 void showConfigUI();
+std::string buildPrompt();
 
 #endif // SHELL_H

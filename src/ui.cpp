@@ -1,6 +1,23 @@
+// Terminal Engine
+
 #include "shell.h"
 #include <termios.h>
 #include <unistd.h>
+// #include <cstdlib.h>
+#include <limits.h>
+
+std::string getBottomPrompt() {
+  std::string bottom = "\033[1;36m╰>\033[0m";
+  std::string color = shell_config.prompt_color;
+  std::string symbol = shell_config.prompt_symbol;
+
+  if(geteuid() == 0) {
+    color = "\033[1;31m";
+    if(symbol == "$") symbol = "#";
+  }
+
+  return bottom + color + symbol + "\033[0m ";
+}
 
 bool readLine(std::string& input) {
   termios oldt, newt;  // termios is a struct that holds the settings for terminal(colors, speed, modes)
@@ -35,7 +52,7 @@ bool readLine(std::string& input) {
             history_index--;
             input = command_history[history_index];
 
-            std::string redraw = "\033[2K\r$ " + input; // \033 -> escape character, [ -> CSI, 2 -> horizontal full line, K -> erasae signal, \r -> to reach cursor to starting point
+            std::string redraw = "\033[2K\r" + getBottomPrompt() + input; // \033 -> escape character, [ -> CSI, 2 -> horizontal full line, K -> erasae signal, \r -> to reach cursor to starting point
             write(STDOUT_FILENO, redraw.c_str(), redraw.length());  // write the terminal
           }
         } else if(seq[1] == 'B') { // down arrow ^[[B
@@ -48,7 +65,7 @@ bool readLine(std::string& input) {
               input = command_history[history_index];
             }
 
-            std::string redraw = "\033[2K\r$ " + input;
+            std::string redraw = "\033[2K\r" + getBottomPrompt() + input;
             write(STDOUT_FILENO, redraw.c_str(), redraw.length());
           }
         }
@@ -126,7 +143,8 @@ bool readLine(std::string& input) {
                 write(STDOUT_FILENO, "  ", 2);
               }
             }
-            write(STDOUT_FILENO, "\n$ ", 3);
+            std::string redraw_prompt = "\n" + getBottomPrompt();
+            write(STDOUT_FILENO, redraw_prompt.c_str(), redraw_prompt.length());
             write(STDOUT_FILENO, input.c_str(), input.length());
 
             tab_count = 0;
@@ -147,4 +165,38 @@ bool readLine(std::string& input) {
   // Restore normal Cooked Mode before running the command
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
   return true;
+}
+
+std::string buildPrompt() {
+  std::string prompt = "";
+
+  // get user and host
+  const char* user = std::getenv("USER");
+  char host[256];
+  gethostname(host, sizeof(host));
+
+  char cwd[1024];
+  getcwd(cwd, sizeof(cwd));
+  std::string cwd_str(cwd);
+  const char* home = std::getenv("HOME");
+  if(home != nullptr) {
+    std::string home_str(home);
+    if(cwd_str.find(home_str) == 0) {
+      cwd_str.replace(0, home_str.length(), "~");
+    }
+  }
+
+  bool is_root = (geteuid() == 0);
+  std::string user_color = is_root ? "\033[1;31m" : "\033[1;32m";
+  std::string user_str = user ? user : (is_root ? "root" : "user");
+  
+
+  // Assemble Top line 
+  prompt += "\n\033[1;36m[" + user_color + user_str + "\033[0m@\033[1;34m" + std::string(host) + "\033[1;36m]\033[0m ";
+  prompt += "\033[1;33m" + cwd_str + "\033[0m\n";
+
+  // Assemble Bottom line
+  prompt += getBottomPrompt();
+
+  return prompt;
 }

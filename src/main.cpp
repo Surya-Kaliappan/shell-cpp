@@ -1,3 +1,5 @@
+// Enter point and Globals
+
 #include "shell.h"
 #include <fstream>
 #include <sys/stat.h>
@@ -46,8 +48,8 @@ int main(int argc, char** argv) {
 
     while(true) {
         executeJobs(false);
-        std::cout << "\n$ ";
 
+        std::cout << buildPrompt();
         if(!readLine(input)) break;
         if(input.empty()) continue;
 

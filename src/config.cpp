@@ -1,3 +1,5 @@
+// Configuration panel
+
 #include "shell.h"
 #include <fstream>
 #include <cstdlib>
@@ -6,6 +8,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <cctype>
 
 std::string getConfigFilePath() {
     const char* home_env = std::getenv("HOME");
@@ -32,7 +35,7 @@ void loadConfig() {
             std::string value = line.substr(delim + 1);
 
             if (key == "prompt_color") shell_config.prompt_color = value;
-            else if (key == "show_username") shell_config.show_username = (value == "true" || value == "1");
+            else if (key == "prompt_symbol") shell_config.prompt_symbol = value;
             else if (key == "enable_suggestions") shell_config.enable_suggestions = (value == "true" || value == "1");
         }
     }
@@ -46,7 +49,7 @@ void saveConfig() {
     std::ofstream outfile(path); // output file stead to save the text in file
     if (outfile.is_open()) {
         outfile << "prompt_color=" << shell_config.prompt_color << "\n";
-        outfile << "show_username=" << (shell_config.show_username ? "true" : "false") << "\n";
+        outfile << "prompt_symbol=" << shell_config.prompt_symbol << "\n";
         outfile << "enable_suggestions=" << (shell_config.enable_suggestions ? "true" : "false") << "\n";
         outfile.close();
     }
@@ -65,7 +68,7 @@ void showConfigUI() {
     // tract the state of UI
     int selected = 0;
     const int NUM_OPTIONS = 4;
-    const int MAX_WIDTH = 50;
+    const int MAX_WIDTH = 55;
 
     std::vector<std::pair<std::string, std::string>> colors = {
         {"Green", "\033[1;32m"}, {"Blue", "\033[1;34m"}, {"Cyan", "\033[1;36m"},
@@ -125,8 +128,9 @@ void showConfigUI() {
                     right_text = colors[p_color_idx].first;
                     right_color = colors[p_color_idx].second;
                 } else if (i == 1) {
-                    left_text += "Show Username";
-                    right_text = shell_config.show_username ? "[ON]" : "[OFF]";
+                    left_text += "Prompt Symbol (Type)";
+                    right_text = shell_config.prompt_symbol + (selected == 1 ? "_" : "");
+                    right_color = colors[p_color_idx].second;
                 } else if (i == 2) {
                     left_text += "Enable Suggestions";
                     right_text = shell_config.enable_suggestions ? "[ON]" : "[OFF]";
@@ -158,25 +162,30 @@ void showConfigUI() {
                         if (seq[1] == 'B') selected = (selected < NUM_OPTIONS - 1) ? selected + 1 : 0; // DOWN
                         if (seq[1] == 'C') { // RIGHT
                             if (selected == 0) p_color_idx = (p_color_idx + 1) % colors.size();
-                            if (selected == 1) shell_config.show_username = !shell_config.show_username;
                             if (selected == 2) shell_config.enable_suggestions = !shell_config.enable_suggestions;
                         }
                         if (seq[1] == 'D') { // LEFT
                             if (selected == 0) p_color_idx = (p_color_idx == 0) ? colors.size() - 1 : p_color_idx - 1;
-                            if (selected == 1) shell_config.show_username = !shell_config.show_username;
                             if (selected == 2) shell_config.enable_suggestions = !shell_config.enable_suggestions;
                         }
                     }
+                }
+            } else if (c == 127) { // for backspace
+                if(selected == 1 && !shell_config.prompt_symbol.empty()) {
+                    shell_config.prompt_symbol.pop_back();
+                }
+            } else if (std::isprint(c)) { // normal typing support: checking the character is printable or not like '\n' and 'A'
+                if(selected == 1 && shell_config.prompt_symbol.length() < 10) {
+                    shell_config.prompt_symbol += c;
+                } else if (c == 'q' && selected != 1) {
+                    running = false;
                 }
             } else if (c == '\n') {
                 if (selected == 3) {
                     shell_config.prompt_color = colors[p_color_idx].second;
                     saveConfig(); 
                     running = false;
-                } else if (selected == 1) shell_config.show_username = !shell_config.show_username;
-                else if (selected == 2) shell_config.enable_suggestions = !shell_config.enable_suggestions;
-            } else if (c == 'q') {
-                running = false; 
+                } else if (selected == 2) shell_config.enable_suggestions = !shell_config.enable_suggestions;
             }
         }
     }
