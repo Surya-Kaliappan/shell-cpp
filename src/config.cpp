@@ -24,7 +24,7 @@ void loadConfig() {
 
     std::string line;
     while (std::getline(infile, line)) {
-        if (line.empty() || line[0] == '#') continue;
+        if (line.empty() || line[0] == '#') continue; // # to avoid the line
 
         size_t delim = line.find('=');
         if (delim != std::string::npos) {
@@ -43,7 +43,7 @@ void saveConfig() {
     std::string path = getConfigFilePath();
     if (path.empty()) return;
 
-    std::ofstream outfile(path);
+    std::ofstream outfile(path); // output file stead to save the text in file
     if (outfile.is_open()) {
         outfile << "prompt_color=" << shell_config.prompt_color << "\n";
         outfile << "show_username=" << (shell_config.show_username ? "true" : "false") << "\n";
@@ -53,14 +53,16 @@ void saveConfig() {
 }
 
 void showConfigUI() {
-    std::cout << "\033[?1049h\033[?25l"; 
+    std::cout << "\033[?1049h\033[?25l"; // ANSI escape code, ?1049h = turn on alternate screen buffer, ?251 = turn off cursor
     
+    // switch canonical mode to raw mode
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
+    // tract the state of UI
     int selected = 0;
     const int NUM_OPTIONS = 4;
     const int MAX_WIDTH = 50;
@@ -70,24 +72,26 @@ void showConfigUI() {
         {"Red", "\033[1;31m"}, {"Magenta", "\033[1;35m"}, {"Yellow", "\033[1;33m"}
     };
 
+    // lambda function get the color name
     auto getColorIndex = [&](const std::string& code) {
         for (size_t i = 0; i < colors.size(); i++) if (colors[i].second == code) return i;
         return (size_t)0;
     };
 
+    // get the picked color code by name
     int p_color_idx = getColorIndex(shell_config.prompt_color);
     bool running = true;
 
     while (running) {
-        struct winsize w;
-        ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-        int cols = w.ws_col;
+        struct winsize w; // window size structure which holds the details of screen structure
+        ioctl(STDOUT_FILENO, TIOCGWINSZ, &w); // input/output control, Terminal I/O Window Size
+        int cols = w.ws_col; // get the column of 
         
-        int menu_width = (cols < MAX_WIDTH) ? cols : MAX_WIDTH;
-        int left_pad_amount = (cols - menu_width) / 2;
-        std::string pad(left_pad_amount > 0 ? left_pad_amount : 0, ' ');
+        int menu_width = (cols < MAX_WIDTH) ? cols : MAX_WIDTH; // calculate the width if going out of max width to keep still
+        int left_pad_amount = (cols - menu_width) / 2; // make it center, just calculate the left space to make it
+        std::string pad(left_pad_amount > 0 ? left_pad_amount : 0, ' '); // add space before insert the text to make it feel center
 
-        std::cout << "\033[2J\033[H"; // Clear screen
+        std::cout << "\033[2J\033[H"; // 2J = clear entire screen,H = moves the invisible drawing pen back to top-left corner, to make old text gets wiped away at every frame starts
 
         // Centered Header
         std::string title = "=== MyShell Configuration ===";
@@ -98,13 +102,13 @@ void showConfigUI() {
         for (int i = 0; i < NUM_OPTIONS; i++) {
             std::cout << pad; 
 
-            if (i == 3) {
+            if (i == NUM_OPTIONS-1) {
                 // The "Save & Exit" Button
                 std::string btn = "[ Save & Exit ]";
                 int btn_pad = (menu_width - btn.length()) / 2;
                 
                 // If selected, apply Green + Invert to make a solid green block!
-                if (i == selected) std::cout << "\033[1;32m\033[7m"; 
+                if (i == selected) std::cout << "\033[1;32m\033[7m";  // 1;32m makes bold green, 7m is invert command to change color of whatever
                 else std::cout << "\033[1;32m"; // Just green text if not selected
                 
                 std::cout << std::string(btn_pad, ' ') << btn << std::string(menu_width - btn_pad - btn.length(), ' ');
@@ -134,11 +138,11 @@ void showConfigUI() {
                 std::cout << left_text << middle_spaces << right_color << right_text << "\033[0m";
             }
 
-            // ADDED: The requested gap between stack options
+            // The gap between stack options
             std::cout << "\n\n"; 
         }
 
-        // ADDED: The Info Footer with an extra gap above it
+        // The Info Footer with an extra gap above it
         std::string footer = "UP/DOWN: Select   LEFT/RIGHT: Change   Q: Quit";
         int footer_pad = (menu_width - footer.length()) / 2;
         // \033[90m is the ANSI code for faded grey text
@@ -150,8 +154,8 @@ void showConfigUI() {
                 char seq[2];
                 if (read(STDIN_FILENO, &seq[0], 1) > 0 && read(STDIN_FILENO, &seq[1], 1) > 0) {
                     if (seq[0] == '[') {
-                        if (seq[1] == 'A') selected = (selected > 0) ? selected - 1 : NUM_OPTIONS - 1; 
-                        if (seq[1] == 'B') selected = (selected < NUM_OPTIONS - 1) ? selected + 1 : 0; 
+                        if (seq[1] == 'A') selected = (selected > 0) ? selected - 1 : NUM_OPTIONS - 1; // UP
+                        if (seq[1] == 'B') selected = (selected < NUM_OPTIONS - 1) ? selected + 1 : 0; // DOWN
                         if (seq[1] == 'C') { // RIGHT
                             if (selected == 0) p_color_idx = (p_color_idx + 1) % colors.size();
                             if (selected == 1) shell_config.show_username = !shell_config.show_username;
@@ -177,6 +181,6 @@ void showConfigUI() {
         }
     }
 
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    std::cout << "\033[?1049l\033[?25h"; 
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // connect to old terminal settings
+    std::cout << "\033[?1049l\033[?25h"; // ?10491 = turn off alternate buffer and back to normal terminal, ?25h = turn on cursor
 }
