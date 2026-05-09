@@ -3,7 +3,7 @@ CXX = c++
 CXXFLAGS = -Wall -Wextra -std=c++17
 
 # The final executable name
-TARGET = myshell
+TARGET = a.out
 
 # The source files we are going to create
 SRCS = main.cpp parser.cpp builtins.cpp execution.cpp autocomplete.cpp ui.cpp config.cpp
