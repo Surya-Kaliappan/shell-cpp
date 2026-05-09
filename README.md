@@ -245,3 +245,13 @@ No need to change anything, because already done this in preivous stages.
 ### codecrafter/shell/programmable_completion/unregister_completion
 
 This stage is not a huge task, it means to remove the completer register from storage(unordered_job). accept the argument '-r' to trigger this code. This updated in funtion `executeComplete`.
+
+### shell/Config/Interface
+
+Here design the separate interface for configuration the shell, like editing the prompt text ($), change its color, make autocomplete (on/off), in future the option might be added with possible. this was done with stop the working terminal and create a new canvas, once done with configuration interface, then it will back to normal terminal as continue. this will save the options in separate file as hidden which helps to restore the settings when ever program runs.
+
+### shell/UI/shell_prompt_design
+
+In this stage, just created a function called `builtPrompt` to design the layered lines with user details and directory details in first line, and second line has user defined symbol which can easily edit using '--config' to reach the config page.
+
+And adjust the cursor movement to make it like earse everytime typed with noted where the cursor placed. this makes the continuous typing. this all done in inline function `redrawLine`.
