@@ -7,7 +7,7 @@
 #include <limits.h>
 
 std::string getBottomPrompt() {
-  std::string bottom = "\033[1;36m╰>\033[0m";
+  std::string bottom = "\033[1;36m╰>\033[0m";  // ╰─
   std::string color = shell_config.prompt_color;
   std::string symbol = shell_config.prompt_symbol;
 
@@ -32,6 +32,18 @@ bool readLine(std::string& input) {
 
   // starts at very end of the history list
   int history_index = command_history.size();
+  int cursor_pos = 0;
+
+  auto redrawLine = [&]() {
+    std::string prompt = getBottomPrompt();
+    std::string out = "\033[2K\r" + prompt + input; // \033 -> escape character, [ -> CSI, 2 -> horizontal full line, K -> erase signal, \r -> to reach cursor to starting point
+    write(STDOUT_FILENO, out.c_str(), out.length());
+
+    if(cursor_pos < (int)input.length()) {
+      std::string move_back = "\033[" + std::to_string(input.length() - cursor_pos) + "D"; // \033[4D = to make the 4 column left from blink pos
+      write(STDOUT_FILENO, move_back.c_str(), move_back.length());  // write the terminal
+    }
+  };
 
   while(true) {
     int n = read(STDIN_FILENO, &c, 1);
@@ -51,9 +63,8 @@ bool readLine(std::string& input) {
           if(history_index > 0) { // check upto last command
             history_index--;
             input = command_history[history_index];
-
-            std::string redraw = "\033[2K\r" + getBottomPrompt() + input; // \033 -> escape character, [ -> CSI, 2 -> horizontal full line, K -> erasae signal, \r -> to reach cursor to starting point
-            write(STDOUT_FILENO, redraw.c_str(), redraw.length());  // write the terminal
+            cursor_pos = input.length();
+            redrawLine();
           }
         } else if(seq[1] == 'B') { // down arrow ^[[B
           if(history_index < (int)command_history.size()) { // history_index is integer, and size() would return size_t, it won't allow negative, when compare that might problem
@@ -64,9 +75,18 @@ bool readLine(std::string& input) {
             } else {
               input = command_history[history_index];
             }
-
-            std::string redraw = "\033[2K\r" + getBottomPrompt() + input;
-            write(STDOUT_FILENO, redraw.c_str(), redraw.length());
+            cursor_pos = input.length();
+            redrawLine();
+          }
+        } else if(seq[1] == 'C') {
+          if(cursor_pos < (int)input.length()) {
+            cursor_pos++;
+            redrawLine();
+          }
+        } else if(seq[1] == 'D') {
+          if(cursor_pos > 0) {
+            cursor_pos--;
+            redrawLine();
           }
         }
       }
@@ -76,10 +96,10 @@ bool readLine(std::string& input) {
       write(STDOUT_FILENO, "\n", 1); // print the enter key
       break;
     } else if(c == 127) { // Backspace Key
-      if(!input.empty()) {
-        input.pop_back();
-        // Move cursor back, print a space to erase, move cursor back again
-        write(STDOUT_FILENO, "\b \b", 3);
+      if(cursor_pos > 0) {
+        input.erase(cursor_pos - 1, 1);
+        cursor_pos--;
+        redrawLine();
       }
     } else if(c == '\t') {  // TAB key (Autocomplete)
       tab_count++;
@@ -120,16 +140,16 @@ bool readLine(std::string& input) {
 
         input += completion;
         // Print the missing letters to the screen
-        write(STDOUT_FILENO, completion.c_str(), completion.length());
-        tab_count = 0;
+        cursor_pos = input.length();
+        redrawLine();
       } else if(matches.size() > 1) {
         std::string lcp = getLongestCommonPrefix(matches);
 
         if(lcp.length() > search_term.length()) {
           std::string added_chars = lcp.substr(search_term.length());  // starts from ith index to end.
           input += added_chars;
-          write(STDOUT_FILENO, added_chars.c_str(), added_chars.length());
-
+          cursor_pos = input.length();
+          redrawLine();
         } else {
           if(tab_count == 1) {
             write(STDOUT_FILENO, "\a", 1);
@@ -143,10 +163,8 @@ bool readLine(std::string& input) {
                 write(STDOUT_FILENO, "  ", 2);
               }
             }
-            std::string redraw_prompt = "\n" + getBottomPrompt();
-            write(STDOUT_FILENO, redraw_prompt.c_str(), redraw_prompt.length());
-            write(STDOUT_FILENO, input.c_str(), input.length());
-
+            write(STDOUT_FILENO, "\n", 1);
+            redrawLine();
             tab_count = 0;
           }
         }
@@ -157,8 +175,9 @@ bool readLine(std::string& input) {
     } else {
       tab_count = 0;
       // Normal characters
-      input += c;
-      write(STDOUT_FILENO, &c, 1); // Manually print the letter just types
+      input.insert(cursor_pos, 1, c);
+      cursor_pos++;
+      redrawLine();
     }
   }
 
@@ -192,7 +211,7 @@ std::string buildPrompt() {
   
 
   // Assemble Top line 
-  prompt += "\n\033[1;36m[" + user_color + user_str + "\033[0m@\033[1;34m" + std::string(host) + "\033[1;36m]\033[0m ";
+  prompt += "\n\033[1;36m╭─[" + user_color + user_str + "\033[0m\033[1;34m🥷" + std::string(host) + "\033[1;36m]\033[0m ";
   prompt += "\033[1;33m" + cwd_str + "\033[0m\n";
 
   // Assemble Bottom line
