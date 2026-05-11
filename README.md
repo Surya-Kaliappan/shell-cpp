@@ -255,3 +255,11 @@ Here design the separate interface for configuration the shell, like editing the
 In this stage, just created a function called `builtPrompt` to design the layered lines with user details and directory details in first line, and second line has user defined symbol which can easily edit using '--config' to reach the config page.
 
 And adjust the cursor movement to make it like earse everytime typed with noted where the cursor placed. this makes the continuous typing. this all done in inline function `redrawLine`.
+
+### shell/UI/suggestion_exe_dir
+
+In this stage, add a condition like give only directory and executable to show as suggestion when input have './',just modify the `readLine` funtion to make this done.
+
+### shell/UI/preserve_last_history_buffer
+
+In this stage, make sure the typed buffer has saved when up arrow pressed, and reach back to the very bottom, the saved buffer would appear, make the thing easy without re type the last command. This was done in function `readLine`.
