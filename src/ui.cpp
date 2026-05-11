@@ -109,7 +109,7 @@ bool readLine(std::string& input) {
       size_t last_space = input.find_last_of(' ');
       if(last_space != std::string::npos) { // if no space was there the it fails and do else
         search_term = input.substr(last_space + 1);
-        std::string base_cmd = input.substr(0, input.find_first_of(' '));
+        std::string base_cmd = input.substr(0, input.find_first_of(' ')); // base_cmd like git, docker,
 
         std::string previous_word = "";
         size_t prev_end = input.find_last_not_of(' ', last_space); // find the character which is before the given string in reverse order
@@ -127,10 +127,14 @@ bool readLine(std::string& input) {
         if(completion_scripts.find(base_cmd) != completion_scripts.end()) {
           matches = getProgrammableCompletions(completion_scripts[base_cmd], base_cmd, search_term, previous_word, input);
         } else {
-          matches = getFileCompletions(search_term);
+          matches = getFileCompletions(search_term, base_cmd);
         }
       } else {
-        matches = getCompletions(search_term);
+        if(search_term.find('/') != std::string::npos || search_term.find('.') == 0) {
+          matches = getFileCompletions(search_term, search_term);
+        } else {
+          matches = getCompletions(search_term);
+        }
       }
 
       // if found exactly one match, autocomplete it!

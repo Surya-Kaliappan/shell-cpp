@@ -102,7 +102,7 @@ std::vector<std::string> getProgrammableCompletions(const std::string& script_pa
   return results;  
 }
 
-std::vector<std::string> getFileCompletions(const std::string& search_term) {
+std::vector<std::string> getFileCompletions(const std::string& search_term, const std::string& base_cmd) {
   std::set<std::string> matches;
 
   std::string dir_path = "."; // Default current Directory
@@ -127,10 +127,21 @@ std::vector<std::string> getFileCompletions(const std::string& search_term) {
 
         struct stat statbuf;
         bool is_dir = false;
+        bool is_executable = false;
+
         if(stat(full_path.c_str(), &statbuf) == 0) { // tell to go and find the file and fills out the folder, if exists return 0.
           if(S_ISDIR(statbuf.st_mode)) { // if stat() finish ok, then statbuf would have data. one of it variable struct is st_mode(permission + type details)
             is_dir = true;              // This S_ISDIR check the signature of the directory with st_mode which has messy combination
           }
+        } 
+        if(access(full_path.c_str(), X_OK) == 0) {
+          is_executable = true;
+        }
+
+        if(base_cmd == "cd") {
+          if(!is_dir) continue;
+        } else if(base_cmd == search_term) {
+          if(!is_dir && !is_executable) continue;
         }
 
         std::string match_str = (last_slash != std::string::npos) ? (dir_path + name) : name;

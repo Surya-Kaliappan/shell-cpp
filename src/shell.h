@@ -53,7 +53,7 @@ void executeComplete(const std::vector<std::string>& tokens);
 std::vector<std::string> getCompletions(const std::string& prefix);
 std::string getLongestCommonPrefix(const std::vector<std::string>& matches);
 std::vector<std::string> getProgrammableCompletions(const std::string& script_path, const std::string& base_cmd, const std::string& search_term, const std::string& previous_word, const std::string& full_input);
-std::vector<std::string> getFileCompletions(const std::string& search_term);
+std::vector<std::string> getFileCompletions(const std::string& search_term, const std::string& base_cmd);
 
 // UI / IO
 bool readLine(std::string& input);
