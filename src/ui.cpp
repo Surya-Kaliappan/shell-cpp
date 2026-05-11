@@ -33,6 +33,7 @@ bool readLine(std::string& input) {
   // starts at very end of the history list
   int history_index = command_history.size();
   int cursor_pos = 0;
+  std::string current_buffer = "";
 
   auto redrawLine = [&]() {
     std::string prompt = getBottomPrompt();
@@ -61,6 +62,7 @@ bool readLine(std::string& input) {
       if(seq[0] == '[') {
         if(seq[1] == 'A') { // up arrow ^[[A
           if(history_index > 0) { // check upto last command
+            if(history_index == (int)command_history.size()) current_buffer = input;
             history_index--;
             input = command_history[history_index];
             cursor_pos = input.length();
@@ -71,7 +73,7 @@ bool readLine(std::string& input) {
             history_index++;
 
             if(history_index == (int)command_history.size()) { // reach the end of the history list to show the empty string
-              input = "";
+              input = current_buffer;
             } else {
               input = command_history[history_index];
             }
