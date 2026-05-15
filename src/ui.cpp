@@ -5,6 +5,8 @@
 #include <unistd.h>
 // #include <cstdlib.h>
 #include <limits.h>
+#include <sys/ioctl.h>
+#include <algorithm>
 
 std::string getBottomPrompt() {
   std::string bottom = "\033[1;36m╰>\033[0m";  // ╰─
@@ -162,14 +164,36 @@ bool readLine(std::string& input) {
           } else if(tab_count >= 2) {
             write(STDOUT_FILENO, "\n", 1);
 
-            for(size_t i=0; i<matches.size(); i++) {
-              write(STDOUT_FILENO, matches[i].c_str(), matches[i].length());
+            struct winsize w;
+            ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+            int term_cols = w.ws_col > 0 ? w.ws_col : 80;
 
-              if(i != matches.size() - 1) {
-                write(STDOUT_FILENO, "  ", 2);
-              }
+            // find longest word to calculate column width
+            int max_width = 0;
+            for(size_t i=0; i<matches.size(); i++) {
+              max_width = std::max(max_width, (int)matches[i].length());
             }
-            write(STDOUT_FILENO, "\n", 1);
+            max_width += 2;
+
+            int cols = std::max(1, term_cols / max_width);
+            int rows = (matches.size() + cols - 1) / cols;
+
+            for(int r=0; r<rows; r++) {
+              std::string row_str = "";
+              for(int c=0; c<cols; c++) {
+                int idx = r + c * rows;
+                if(idx < (int)matches.size()) {
+                  row_str += matches[idx];
+                  int padding = max_width - matches[idx].length();
+                  if(padding > 0 && c < cols - 1) {
+                    row_str += std::string(padding, ' ');
+                  }
+                }
+              }
+              row_str += "\n";
+              write(STDOUT_FILENO, row_str.c_str(), row_str.length());
+            }
+
             redrawLine();
             tab_count = 0;
           }
