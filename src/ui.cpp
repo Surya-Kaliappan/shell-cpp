@@ -3,7 +3,6 @@
 #include "shell.h"
 #include <termios.h>
 #include <unistd.h>
-// #include <cstdlib.h>
 #include <limits.h>
 #include <sys/ioctl.h>
 #include <algorithm>
@@ -36,6 +35,7 @@ bool readLine(std::string& input) {
   int history_index = command_history.size();
   int cursor_pos = 0;
   std::string current_buffer = "";
+  std::string current_ghost_text = "";
 
   // Menu state variable
   bool in_menu = false;
@@ -112,7 +112,23 @@ bool readLine(std::string& input) {
       out += "\r\033[" + std::to_string(menu_lines_drawn) + "A";
     }
 
+    current_ghost_text = "";
+    if(shell_config.enable_suggestions && !input.empty() && !in_menu && cursor_pos == (int)input.length()) {
+      for(int i=command_history.size()-1; i>=0; i--) {
+        if(command_history[i].length() > input.length() && command_history[i].rfind(input, 0) == 0) {
+          current_ghost_text = command_history[i].substr(input.length());
+          break;
+        }
+      }
+    }
+
     out += "\r" + getBottomPrompt() + input;
+    if(!current_ghost_text.empty()) {
+      out += "\033[s"; // save the current position of cursor
+      out += "\033[90m" + current_ghost_text + "\033[0m";
+      out += "\033[u"; // restore cursor perfectly back to the saved position
+    }
+
     if(cursor_pos < (int)input.length()) {
       out += "\033[" + std::to_string(input.length() - cursor_pos) + "D";
     }
@@ -194,6 +210,10 @@ bool readLine(std::string& input) {
           if(cursor_pos < (int)input.length()) {
             cursor_pos++;
             redrawLine();
+          } else if(!current_ghost_text.empty() && cursor_pos == (int)input.length()) {
+            input += current_ghost_text;
+            cursor_pos = input.length();
+            redrawLine();
           }
         } else if(seq[1] == 'D') {
           if(cursor_pos > 0) {
@@ -209,7 +229,8 @@ bool readLine(std::string& input) {
         closeMenu();
         continue;
       }
-      write(STDOUT_FILENO, "\n", 1); // print the enter key
+      std::string final_out = "\r\033[0J" + getBottomPrompt() + input + "\n";
+      write(STDOUT_FILENO, final_out.c_str(), final_out.length()); // print the enter key
       break;
     } else if(c == 127) { // Backspace Key
       if(in_menu) closeMenu();
@@ -227,11 +248,18 @@ bool readLine(std::string& input) {
         continue;
       }
 
+      if(input.empty() || input.find_first_not_of(' ') == std::string::npos) {
+        write(STDOUT_FILENO, "\a", 1);
+        tab_count = 0;
+        continue;
+      }
+
       tab_count++;
       std::string search_term = input;
       std::vector<std::string> matches;
 
       size_t last_space = input.find_last_of(' ');
+      base_input_before_completion = (last_space != std::string::npos) ? input.substr(0, last_space + 1) : "";
       if(last_space != std::string::npos) { // if no space was there the it fails and do else
         search_term = input.substr(last_space + 1);
         std::string base_cmd = input.substr(0, input.find_first_of(' ')); // base_cmd like git, docker,
@@ -332,7 +360,7 @@ std::string buildPrompt() {
   
 
   // Assemble Top line 
-  prompt += "\n\033[1;36m╭─[" + user_color + user_str + "\033[0m\033[1;34m🥷" + std::string(host) + "\033[1;36m]\033[0m ";
+  prompt += "\n\033[1;36m╭──(" + user_color + user_str + "\033[0m\033[1;34m🥷" + std::string(host) + "\033[1;36m)\033[0m ";
   prompt += "\033[1;33m" + cwd_str + "\033[0m\n";
 
   // Assemble Bottom line

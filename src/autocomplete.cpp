@@ -128,6 +128,7 @@ std::vector<std::string> getFileCompletions(const std::string& search_term, cons
         struct stat statbuf;
         bool is_dir = false;
         bool is_executable = false;
+        bool is_hidden = (name[0] == '.');
 
         if(stat(full_path.c_str(), &statbuf) == 0) { // tell to go and find the file and fills out the folder, if exists return 0.
           if(S_ISDIR(statbuf.st_mode)) { // if stat() finish ok, then statbuf would have data. one of it variable struct is st_mode(permission + type details)
@@ -140,8 +141,10 @@ std::vector<std::string> getFileCompletions(const std::string& search_term, cons
 
         if(base_cmd == "cd") {
           if(!is_dir) continue;
-        } else if(base_cmd == search_term) {
+        } else if(base_cmd == search_term || base_cmd.empty()) {
           if(!is_dir && !is_executable) continue;
+        } else {
+          if(is_hidden && prefix.empty()) continue;
         }
 
         std::string match_str = (last_slash != std::string::npos) ? (dir_path + name) : name;
