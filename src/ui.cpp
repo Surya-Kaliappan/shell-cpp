@@ -37,15 +37,103 @@ bool readLine(std::string& input) {
   int cursor_pos = 0;
   std::string current_buffer = "";
 
+  // Menu state variable
+  bool in_menu = false;
+  std::vector<std::string> menu_options;
+  int menu_selected = 0;
+  std::string base_input_before_completion = "";
+
+  // tracks scrolling window
+  static int viewport_start_row = 0;
+
   auto redrawLine = [&]() {
-    std::string prompt = getBottomPrompt();
-    std::string out = "\033[2K\r" + prompt + input; // \033 -> escape character, [ -> CSI, 2 -> horizontal full line, K -> erase signal, \r -> to reach cursor to starting point
+
+    std::string out = "\r\033[0J";
+    out += getBottomPrompt() + input;
+
+    int menu_lines_drawn = 0;
+
+    if(in_menu && !menu_options.empty()) {
+      struct winsize w;
+      ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+      int term_cols = w.ws_col > 0 ? w.ws_col : 80;
+      int term_rows = w.ws_row > 0 ? w.ws_row : 24;
+
+      int max_width = 0;
+      for(size_t i=0; i<menu_options.size(); i++) {
+        max_width = std::max(max_width, (int)menu_options[i].length());
+      }
+      max_width += 2;
+
+      int cols = std::max(1, term_cols / max_width);
+      int total_rows = (menu_options.size() + cols - 1) / cols;
+
+      int max_visible_rows = std::max(3, term_rows - 4);
+      int selected_row = menu_selected / cols;
+
+      // viewport scroll logic
+      if(selected_row < viewport_start_row) {
+        viewport_start_row = selected_row;
+      } else if(selected_row >= viewport_start_row + max_visible_rows) {
+        viewport_start_row = selected_row - max_visible_rows + 1;
+      }
+
+      out += "\n";
+      menu_lines_drawn++;
+
+      int end_row = std::min(total_rows, viewport_start_row + max_visible_rows);
+      for(int r=viewport_start_row; r<end_row; r++) {
+        for(int c=0; c<cols; c++) {
+          int idx = r * cols + c;
+          if(idx < (int)menu_options.size()) {
+            if(idx == menu_selected) out += "\033[7m"; // highlight
+
+            std::string item = " " + menu_options[idx] + " ";
+            out += item;
+
+            int padding = max_width - item.length();
+            if(padding > 0) out += std::string(padding, ' ');
+
+            if(idx == menu_selected) out += "\033[0m"; // reset highlight
+          }
+        }
+        if(r < end_row - 1 || viewport_start_row + max_visible_rows < total_rows) {
+          out += "\n";
+          menu_lines_drawn++;
+        }
+      }
+
+      if(viewport_start_row + max_visible_rows < total_rows) {
+        out += "\033[90m... (scroll down for more) ...\033[0m";
+      }
+    }
+
+    if(menu_lines_drawn > 0) {
+      out += "\r\033[" + std::to_string(menu_lines_drawn) + "A";
+    }
+
+    out += "\r" + getBottomPrompt() + input;
+    if(cursor_pos < (int)input.length()) {
+      out += "\033[" + std::to_string(input.length() - cursor_pos) + "D";
+    }
+
     write(STDOUT_FILENO, out.c_str(), out.length());
 
-    if(cursor_pos < (int)input.length()) {
-      std::string move_back = "\033[" + std::to_string(input.length() - cursor_pos) + "D"; // \033[4D = to make the 4 column left from blink pos
-      write(STDOUT_FILENO, move_back.c_str(), move_back.length());  // write the terminal
-    }
+    // std::string prompt = getBottomPrompt();
+    // std::string out = "\033[2K\r" + prompt + input; // \033 -> escape character, [ -> CSI, 2 -> horizontal full line, K -> erase signal, \r -> to reach cursor to starting point
+    // write(STDOUT_FILENO, out.c_str(), out.length());
+
+    // if(cursor_pos < (int)input.length()) {
+    //   std::string move_back = "\033[" + std::to_string(input.length() - cursor_pos) + "D"; // \033[4D = to make the 4 column left from blink pos
+    //   write(STDOUT_FILENO, move_back.c_str(), move_back.length());  // write the terminal
+    // }
+  };
+
+  auto closeMenu = [&]() {
+    in_menu = false;
+    menu_options.clear();
+    viewport_start_row = 0;
+    redrawLine();
   };
 
   while(true) {
@@ -62,6 +150,26 @@ bool readLine(std::string& input) {
       if(read(STDIN_FILENO, &seq[1], 1) <= 0) continue;
 
       if(seq[0] == '[') {
+
+        if(in_menu) {
+          struct winsize w;
+          ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+          int term_cols = w.ws_col > 0 ? w.ws_col : 80;
+          int max_width = 0;
+          for(size_t i=0; i<menu_options.size(); i++) max_width = std::max(max_width, (int)menu_options[i].length());
+          int cols = std::max(1, term_cols / (max_width + 2));
+
+          if(seq[1] == 'C') menu_selected = (menu_selected + 1) % menu_options.size(); // RIGHT
+          else if(seq[1] == 'D') menu_selected = (menu_selected - 1 + menu_options.size()) % menu_options.size(); // LEFT
+          else if(seq[1] == 'B') menu_selected = (menu_selected + cols) % menu_options.size(); // DOWN
+          else if(seq[1] == 'A') menu_selected = (menu_selected - cols + menu_options.size()) % menu_options.size(); // UP
+
+          input = base_input_before_completion + menu_options[menu_selected];
+          cursor_pos = input.length();
+          redrawLine();
+          continue;
+        }
+
         if(seq[1] == 'A') { // up arrow ^[[A
           if(history_index > 0) { // check upto last command
             if(history_index == (int)command_history.size()) current_buffer = input;
@@ -97,15 +205,28 @@ bool readLine(std::string& input) {
       tab_count = 0;
       continue;
     } else if(c == '\n') {
+      if(in_menu) {
+        closeMenu();
+        continue;
+      }
       write(STDOUT_FILENO, "\n", 1); // print the enter key
       break;
     } else if(c == 127) { // Backspace Key
+      if(in_menu) closeMenu();
       if(cursor_pos > 0) {
         input.erase(cursor_pos - 1, 1);
         cursor_pos--;
         redrawLine();
       }
     } else if(c == '\t') {  // TAB key (Autocomplete)
+      if(in_menu) {
+        menu_selected = (menu_selected + 1) % menu_options.size();
+        input = base_input_before_completion + menu_options[menu_selected];
+        cursor_pos = input.length();
+        redrawLine();
+        continue;
+      }
+
       tab_count++;
       std::string search_term = input;
       std::vector<std::string> matches;
@@ -159,50 +280,20 @@ bool readLine(std::string& input) {
           cursor_pos = input.length();
           redrawLine();
         } else {
-          if(tab_count == 1) {
-            write(STDOUT_FILENO, "\a", 1);
-          } else if(tab_count >= 2) {
-            write(STDOUT_FILENO, "\n", 1);
-
-            struct winsize w;
-            ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-            int term_cols = w.ws_col > 0 ? w.ws_col : 80;
-
-            // find longest word to calculate column width
-            int max_width = 0;
-            for(size_t i=0; i<matches.size(); i++) {
-              max_width = std::max(max_width, (int)matches[i].length());
-            }
-            max_width += 2;
-
-            int cols = std::max(1, term_cols / max_width);
-            int rows = (matches.size() + cols - 1) / cols;
-
-            for(int r=0; r<rows; r++) {
-              std::string row_str = "";
-              for(int c=0; c<cols; c++) {
-                int idx = r + c * rows;
-                if(idx < (int)matches.size()) {
-                  row_str += matches[idx];
-                  int padding = max_width - matches[idx].length();
-                  if(padding > 0 && c < cols - 1) {
-                    row_str += std::string(padding, ' ');
-                  }
-                }
-              }
-              row_str += "\n";
-              write(STDOUT_FILENO, row_str.c_str(), row_str.length());
-            }
-
-            redrawLine();
-            tab_count = 0;
-          }
+          in_menu = true;
+          menu_options = matches;
+          menu_selected = 0;
+          viewport_start_row = 0;
+          input = base_input_before_completion + menu_options[menu_selected];
+          cursor_pos = input.length();
+          redrawLine();
         }
       } else {
         write(STDOUT_FILENO, "\a", 1);
         tab_count = 0;
       }
     } else {
+      if(in_menu) closeMenu();
       tab_count = 0;
       // Normal characters
       input.insert(cursor_pos, 1, c);
