@@ -53,7 +53,9 @@ int main(int argc, char** argv) {
         if(!readLine(input)) break;
         if(input.empty()) continue;
 
-        command_history.push_back(input);
+        if(command_history.back() != input){
+            command_history.push_back(input);
+        }
         std::vector<std::string> tokens = parseInput(input);
 
         if(!executeCommand(tokens)) {
