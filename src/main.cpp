@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <cstdlib>
+#include <algorithm>
 
 std::vector<std::string> command_history;
 size_t history_sync_index = 0;
@@ -46,14 +47,25 @@ int main(int argc, char** argv) {
 
     std::string input;
 
+    auto trim = [](std::string& s) {
+        s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+            return !std::isspace(ch);
+        }).base(), s.end());
+
+        s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+            return !std::isspace(ch);
+        }));
+    };
+
     while(true) {
         executeJobs(false);
 
         std::cout << buildPrompt();
         if(!readLine(input)) break;
+        trim(input);
         if(input.empty()) continue;
 
-        if(command_history.back() != input){
+        if(command_history.empty() || command_history.back() != input){
             command_history.push_back(input);
         }
         std::vector<std::string> tokens = parseInput(input);

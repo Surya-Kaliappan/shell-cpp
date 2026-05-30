@@ -46,9 +46,37 @@ bool readLine(std::string& input) {
   // tracks scrolling window
   static int viewport_start_row = 0;
 
+  // search state variable
+  bool in_search = false;
+  std::string search_query = "";
+  int search_match_index = -1;
+  // bool was_in_search = false;
+
+  // search handler
+  auto updateSearch = [&]() {
+    search_match_index = -1;
+    if(search_query.empty()) return;
+    for(int i=command_history.size()-1; i >= 0; i--) {
+      if(command_history[i].find(search_query) != std::string::npos) {
+        search_match_index = i;
+        break;
+      }
+    }
+  };
+
+
   auto redrawLine = [&]() {
 
     std::string out = "\r\033[0J";
+
+    if(in_search) {
+      std::string match_str = (search_match_index >= 0 && search_match_index < (int)command_history.size())
+                              ? command_history[search_match_index] : "";
+      out += "\033[1;36mbck-i-search:\033[0m " + search_query + "_ \033[37m" + match_str + "\033[0m";
+      write(STDOUT_FILENO, out.c_str(), out.length());
+      return;
+    }
+
     out += getBottomPrompt() + input;
 
     int menu_lines_drawn = 0;
@@ -58,6 +86,15 @@ bool readLine(std::string& input) {
       ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
       int term_cols = w.ws_col > 0 ? w.ws_col : 80;
       int term_rows = w.ws_row > 0 ? w.ws_row : 24;
+
+      auto getDisplayName = [](const std::string& str) {
+        std::string clean = str;
+        char last = clean.empty() ? ' ' : clean.back();
+        if(last == '/' || last == ' ') clean.pop_back();
+        size_t slash = clean.find_last_of('/');
+        if(slash != std::string::npos) clean = clean.substr(slash + 1);
+        return clean + last;
+      };
 
       int max_width = 0;
       for(size_t i=0; i<menu_options.size(); i++) {
@@ -86,7 +123,11 @@ bool readLine(std::string& input) {
         for(int c=0; c<cols; c++) {
           int idx = r * cols + c;
           if(idx < (int)menu_options.size()) {
+            std::string d_name = getDisplayName(menu_options[idx]);
+            bool is_dir = (!menu_options[idx].empty() && menu_options[idx].back() == '/');
+
             if(idx == menu_selected) out += "\033[7m"; // highlight
+            if(is_dir) out += "\033[1;34m";
 
             std::string item = " " + menu_options[idx] + " ";
             out += item;
@@ -157,6 +198,55 @@ bool readLine(std::string& input) {
     if(n <= 0 || c == 4) {  // If EOF or Ctrl-D is pressed
       tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
       return false;  // main loop to break
+    }
+
+    // Ctrl+R interceptor
+    if(c == 18) {
+      if(!in_search) {
+        in_search = true;
+        search_query = "";
+        search_match_index = -1;
+        if(in_menu) closeMenu();
+      } else {
+        if(search_match_index > 0) {
+          for(int i=search_match_index-1; i>=0; i--) {
+            if(command_history[i].find(search_query) != std::string::npos) {
+              search_match_index = i;
+              break;
+            }
+          }
+        }
+      }
+      redrawLine();
+      continue;
+    }
+
+    // input routing while in search mode
+    if(in_search) {
+      if(c == 127) {
+        if(!search_query.empty()) {
+          search_query.pop_back();
+          updateSearch();
+        }
+        redrawLine();
+        continue;
+      } else if(c == '\n') {
+        if(search_match_index >= 0) input = command_history[search_match_index];
+        in_search = false;
+        std::string final_out = "\r\033[0J" + getBottomPrompt() + input + "\n";
+        write(STDOUT_FILENO, final_out.c_str(), final_out.length());
+        break;
+      } else if(c == '\033' || c == '\t') {
+        if(search_match_index >= 0) input = command_history[search_match_index];
+        cursor_pos = input.length();
+        in_search = false;
+        if(c == '\t') { redrawLine(); continue; }
+      } else {
+        search_query += c;
+        updateSearch();
+        redrawLine();
+        continue;
+      }
     }
 
     // arrow keys
@@ -300,6 +390,13 @@ bool readLine(std::string& input) {
         cursor_pos = input.length();
         redrawLine();
       } else if(matches.size() > 1) {
+        std::sort(matches.begin(), matches.end(), [](const std::string& a, const std::string& b) {
+          bool a_is_dir = (!a.empty() && a.back() == '/');
+          bool b_is_dir = (!b.empty() && b.back() == '/');
+          if(a_is_dir != b_is_dir) return a_is_dir;
+          return a < b;
+        });
+
         std::string lcp = getLongestCommonPrefix(matches);
 
         if(lcp.length() > search_term.length()) {
