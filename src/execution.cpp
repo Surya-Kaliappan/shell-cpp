@@ -34,16 +34,21 @@ void executeExternal(const std::vector<std::string>& tokens, bool is_background 
 
   pid_t pid = fork();  // This creates clone of this whole execution and run separately
   if(pid == 0) {  // fork return two pid for parent and chile, and both of them have this same if conditions.
+
+    // restore signal in child
+    signal(SIGINT, SIG_DFL); // DFL - Default
+    signal(SIGTSTP, SIG_DFL); // SIGTSTP - signal terminal stop
+
     execvp(c_args[0], c_args.data()); // This will execute the command in child process
     std::cerr << tokens[0] << ": command not found\n"; // if the process success then this line won't work unless failed
     exit(1);
   } else if(pid > 0) {
-    if(is_background) { // just ask to don't wait for child to complete
-      std::string cmd_str = "";
-      for(size_t i=0; i<tokens.size(); i++) {
-        cmd_str += tokens[i] + (i == tokens.size() - 1 ? "" : " ");
-      }
+    std::string cmd_str = "";
+    for(size_t i=0; i<tokens.size(); i++) {
+      cmd_str += tokens[i] + (i == tokens.size() - 1 ? "" : " ");
+    }
 
+    if(is_background) { // just ask to don't wait for child to complete
       int assigned_id = getNextAvailableJobId();
       Job new_job = {assigned_id, pid, cmd_str, true}; // create the struct
       background_jobs.push_back(new_job); // store the struct
@@ -52,7 +57,15 @@ void executeExternal(const std::vector<std::string>& tokens, bool is_background 
     } else { // ask to wait for child to complete
       int status;  // this vaiable will hold the exit status of the child process
       // pid_t waitpid(pid_t pid, int *status, int options);
-      waitpid(pid, &status, 0); // wait for the child process to finish
+      waitpid(pid, &status, WUNTRACED); // wait for Untraced/Stopped processes to finish
+
+      // catch Ctrl+Z suspension
+      if(WIFSTOPPED(status)) { // ask to cause of process exit
+        std::cout << "\nmyshell: suspended " << cmd_str << "\n";
+        int assigned_id = getNextAvailableJobId();
+        Job new_job = {assigned_id, pid, cmd_str, false}; // false due to paused
+        background_jobs.push_back(new_job);
+      }
     }
   } else {
     std::cerr << "Fork failed\n";
@@ -61,6 +74,10 @@ void executeExternal(const std::vector<std::string>& tokens, bool is_background 
 
 // helper function for execvp from child
 void runWorker(const std::vector<std::string>& tokens) {
+  // restore signals in pipeline child
+  signal(SIGINT, SIG_DFL);
+  signal(SIGTSTP, SIG_DFL);
+  
   if(runBuiltin(tokens)) exit(0); // To run the Builtin commands
 
   std::vector<char*> c_args;
@@ -141,7 +158,20 @@ bool executePipeline(const std::vector<std::string>& tokens) {
   // sleep until the clone in list to finish and die
   for(size_t i=0; i<pids.size(); i++) {
     int status;
-    waitpid(pids[i], &status, 0);
+    waitpid(pids[i], &status, WUNTRACED);
+
+    if(WIFSTOPPED(status)) {
+      if(i == pids.size() - 1) {
+        std::string full_cmd_str = "";
+        for(size_t i=0; i<tokens.size(); i++) {
+          full_cmd_str += tokens[i] + (i == tokens.size() - 1 ? "" : " ");
+        }
+        std::cout << "\nmyshell: suspended " << full_cmd_str << "\n";
+        int assigned_id = getNextAvailableJobId();
+        Job new_job = {assigned_id, pids[0], full_cmd_str, false};
+        background_jobs.push_back(new_job);
+      }
+    }
   }
 
   return true;

@@ -267,3 +267,7 @@ In this stage, make sure the typed buffer has saved when up arrow pressed, and r
 ### shell/UI/search_commands
 
 In this stage, made search techniques via, autocompletion by hitting tabs(this was already builtin, but added local directory and exec to search), inline suggestion when typing, hitting ctrl+R to search from history. this all done in `readLine` function.
+
+### shell/main/ignore_signals
+
+In this stage, just include the signal to take control the Ctrl-C and Ctrl-X to make the parent ignore the signal and child should handle the signal. for this using 'signal.h'.

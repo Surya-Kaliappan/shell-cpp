@@ -5,12 +5,13 @@
 #include <sys/stat.h>
 #include <cstdlib>
 #include <algorithm>
+#include <signal.h>
 
 std::vector<std::string> command_history;
 size_t history_sync_index = 0;
 std::vector<Job> background_jobs;
 std::unordered_map<std::string, std::string> completion_scripts;
-const std::vector<std::string> BUILTINS = {"echo", "exit", "type", "pwd", "cd", "history", "jobs", "complete"};
+const std::vector<std::string> BUILTINS = {"echo", "exit", "type", "pwd", "cd", "history", "jobs", "complete", "bg", "fg", "complete"};
 Config shell_config;
 
 int main(int argc, char** argv) {
@@ -22,6 +23,10 @@ int main(int argc, char** argv) {
         showConfigUI();
         return 0;
     }
+
+    // make the parent shell completely ignore Ctrl+C and Ctrl+Z
+    signal(SIGINT, SIG_IGN);
+    signal(SIGTSTP, SIG_IGN);
 
     std::string histfile_path = "";
     const char* home_env = std::getenv("HOME");

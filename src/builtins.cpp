@@ -143,6 +143,83 @@ void executeHistory(const std::vector<std::string>& tokens) {
   }
 }
 
+void executeFg(const std::vector<std::string>& tokens) {
+  if(background_jobs.empty()) {
+    std::cerr << "fg: current: no such job\n";
+    return;
+  }
+
+  int target_idx = background_jobs.size() - 1;
+  if(tokens.size() > 1) {
+    int req_id = std::stoi(tokens[1]);
+    bool found = false;
+    for(size_t i=0; i<background_jobs.size(); i++) {
+      if(background_jobs[i].job_id == req_id) {
+        target_idx = i;
+        found = true;
+        break;
+      }
+    }
+    if(!found) {
+      std::cerr << "fg: " << req_id << ": no such job\n";
+      return;
+    }
+  }
+
+  Job job = background_jobs[target_idx];
+  std::cout << job.command << "\n"; // print the waked job
+
+  // remove it from background list
+  background_jobs.erase(background_jobs.begin() + target_idx);
+
+  // send the "continue" signal to wake the sleeping process
+  kill(job.pid, SIGCONT);
+
+  int status;
+  waitpid(job.pid, &status, WUNTRACED);
+
+  // catch if Ctrl-Z hits again while it's in foreground
+  if(WIFSTOPPED(status)) {
+    std::cout << "\nmyshell: suspended " << job.command << "\n";
+    job.is_running = false;
+    background_jobs.push_back(job);
+  }
+}
+
+void executeBg(const std::vector<std::string>& tokens) {
+  if(background_jobs.empty()) {
+    std::cerr << "bg: current: no such job\n";
+    return;
+  }
+
+  int target_idx = background_jobs.size() - 1;
+  if(tokens.size() > 1) {
+    int req_id = std::stoi(tokens[1]);
+    bool found = false;
+    for(size_t i=0; i<background_jobs.size(); i++) {
+      if(background_jobs[i].job_id == req_id) {
+        target_idx = i;
+        found = true;
+        break;
+      }
+    }
+    if(!found) {
+      std::cerr << "bg: " << req_id << ": no such job\n";
+      return;
+    }
+  }
+
+  Job& job = background_jobs[target_idx];
+  if(job.is_running) {
+    std::cout << "bg: job already in background\n";
+    return;
+  }
+
+  job.is_running = true;
+  std::cout << "[" << job.job_id << "] " << job.command << " &\n";
+  kill(job.pid, SIGCONT);
+}
+
 void executeJobs(bool show_all) {
   if(background_jobs.empty()) return;
 
@@ -152,16 +229,24 @@ void executeJobs(bool show_all) {
   for(size_t i=0; i<n; i++) {
     Job& job = background_jobs[i]; // take the job reference instead of copy, cause it affect the original if changes happen
 
-    if(job.is_running) {
-      int status;
-      if(waitpid(job.pid, &status, WNOHANG) > 0) { // check child status and move on, if working it return 0
-        job.is_running = false; // this changes the status of child as finished by use of pointer directly
+    int status;
+    pid_t res = waitpid(job.pid, &status, WNOHANG | WUNTRACED | WCONTINUED);
+
+    bool is_dead = false;
+    if(res > 0) {
+      if(WIFEXITED(status) || WIFSIGNALED(status)) {
+        is_dead = true;
+        job.is_running = false;
+      } else if(WIFSTOPPED(status)) {
+        job.is_running = false;
+      } else if(WIFCONTINUED(status)) {
+        job.is_running = true;
       }
     }
 
-    if(show_all || !job.is_running) { // if jobs hit show_all will true, if false then it should show the done process for that avoid the running process
+    if(show_all || is_dead) { // if jobs hit show_all will true, if false then it should show the done process for that avoid the running process
       char marker = (i == n-1) ? '+' : (i == n-2) ? '-' : ' ';
-      std::string state = job.is_running ? "Running" : "Done";
+      std::string state = job.is_running ? "Running" : is_dead ? "Done" : "Stopped";
       std::string ampersand = job.is_running ? " &" : "";
 
       std::cout << "[" << job.job_id << "]" << marker << "  "
@@ -169,7 +254,7 @@ void executeJobs(bool show_all) {
                 << job.command << ampersand << "\n";
     }
 
-    if(job.is_running) {
+    if(!is_dead) {
       active_jobs.push_back(job); // if process running then update in active job.
     }
   }
@@ -210,6 +295,8 @@ bool runBuiltin(const std::vector<std::string>& tokens) {
   if(cmd == "echo") { executeEcho(tokens); return true; }
   if(cmd == "history") { executeHistory(tokens); return true; }
   if(cmd == "jobs") { executeJobs(true); return true; }
+  if(cmd == "fg") { executeFg(tokens); return true; }
+  if(cmd == "bg") { executeBg(tokens); return true; }
   if(cmd == "complete") { executeComplete(tokens); return true; }
   if(cmd == "type") { if(tokens.size() > 1) checkType(tokens[1]); return true; }
   if(cmd == "pwd") { executePwd(); return true; }
