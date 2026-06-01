@@ -50,7 +50,7 @@ bool readLine(std::string& input) {
   bool in_search = false;
   std::string search_query = "";
   int search_match_index = -1;
-  // bool was_in_search = false;
+  bool was_in_search = false;
 
   // search handler
   auto updateSearch = [&]() {
@@ -66,13 +66,30 @@ bool readLine(std::string& input) {
 
 
   auto redrawLine = [&]() {
+    std::string out = "";
+    if(was_in_search) {
+      out += "\r\033[1A"; // move up one line to clear
+    }
 
-    std::string out = "\r\033[0J";
+    out += "\r\033[0J"; // clear everything below
+    was_in_search = in_search;
 
     if(in_search) {
       std::string match_str = (search_match_index >= 0 && search_match_index < (int)command_history.size())
                               ? command_history[search_match_index] : "";
-      out += "\033[1;36mbck-i-search:\033[0m " + search_query + "_ \033[37m" + match_str + "\033[0m";
+      std::string highlighted_match = match_str;
+      if(!search_query.empty() && !match_str.empty()) {
+        size_t pos = match_str.find(search_query);
+        if(pos != std::string::npos) {
+          highlighted_match = "\033[37m" + match_str.substr(0, pos) + 
+                              "\033[1;32m\033[4m" + search_query + "\033[0m\033[37m" + 
+                              match_str.substr(pos + search_query.length()) + "\033[0m";
+        }
+      } else if(!match_str.empty()) {
+        highlighted_match = "\033[37m" + match_str + "\033[0m";
+      }
+      out += getBottomPrompt() + highlighted_match + "\n";
+      out += "\033[1;36mbck-i-search:\033[0m " + search_query + "_";
       write(STDOUT_FILENO, out.c_str(), out.length());
       return;
     }
@@ -156,7 +173,7 @@ bool readLine(std::string& input) {
     current_ghost_text = "";
     if(shell_config.enable_suggestions && !input.empty() && !in_menu && cursor_pos == (int)input.length()) {
       for(int i=command_history.size()-1; i>=0; i--) {
-        if(command_history[i].length() > input.length() && command_history[i].rfind(input, 0) == 0) {
+        if(command_history[i].length() >= input.length() && command_history[i].rfind(input, 0) == 0) {
           current_ghost_text = command_history[i].substr(input.length());
           break;
         }
@@ -175,15 +192,6 @@ bool readLine(std::string& input) {
     }
 
     write(STDOUT_FILENO, out.c_str(), out.length());
-
-    // std::string prompt = getBottomPrompt();
-    // std::string out = "\033[2K\r" + prompt + input; // \033 -> escape character, [ -> CSI, 2 -> horizontal full line, K -> erase signal, \r -> to reach cursor to starting point
-    // write(STDOUT_FILENO, out.c_str(), out.length());
-
-    // if(cursor_pos < (int)input.length()) {
-    //   std::string move_back = "\033[" + std::to_string(input.length() - cursor_pos) + "D"; // \033[4D = to make the 4 column left from blink pos
-    //   write(STDOUT_FILENO, move_back.c_str(), move_back.length());  // write the terminal
-    // }
   };
 
   auto closeMenu = [&]() {
@@ -233,14 +241,17 @@ bool readLine(std::string& input) {
       } else if(c == '\n') {
         if(search_match_index >= 0) input = command_history[search_match_index];
         in_search = false;
-        std::string final_out = "\r\033[0J" + getBottomPrompt() + input + "\n";
+        std::string final_out = "";
+        if (was_in_search) final_out += "\r\033[1A";
+        final_out += "\r\033[0J" + getBottomPrompt() + input + "\n";
         write(STDOUT_FILENO, final_out.c_str(), final_out.length());
         break;
       } else if(c == '\033' || c == '\t') {
         if(search_match_index >= 0) input = command_history[search_match_index];
         cursor_pos = input.length();
         in_search = false;
-        if(c == '\t') { redrawLine(); continue; }
+        redrawLine();
+        if(c == '\t') continue;
       } else {
         search_query += c;
         updateSearch();

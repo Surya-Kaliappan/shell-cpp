@@ -263,3 +263,7 @@ In this stage, add a condition like give only directory and executable to show a
 ### shell/UI/preserve_last_history_buffer
 
 In this stage, make sure the typed buffer has saved when up arrow pressed, and reach back to the very bottom, the saved buffer would appear, make the thing easy without re type the last command. This was done in function `readLine`.
+
+### shell/UI/search_commands
+
+In this stage, made search techniques via, autocompletion by hitting tabs(this was already builtin, but added local directory and exec to search), inline suggestion when typing, hitting ctrl+R to search from history. this all done in `readLine` function.
